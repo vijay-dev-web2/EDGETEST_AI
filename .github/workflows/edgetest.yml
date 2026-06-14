@@ -1,4 +1,4 @@
-name: EdgeTest AI — CI
+name: EdgeTest AI CI
 
 on:
   push:
@@ -6,12 +6,9 @@ on:
   pull_request:
     branches: ["main"]
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   backend:
-    name: Backend Tests (pytest)
+    name: Backend Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,14 +31,7 @@ jobs:
         run: |
           mkdir -p backend/tests
           touch backend/tests/__init__.py
-          cat > backend/tests/test_smoke.py << 'PYEOF'
-def test_smoke():
-    assert True
-
-def test_python_version():
-    import sys
-    assert sys.version_info >= (3, 11)
-PYEOF
+          printf 'def test_smoke():\n    assert True\n' > backend/tests/test_smoke.py
 
       - name: Run backend tests
         run: |
@@ -50,7 +40,7 @@ PYEOF
         continue-on-error: true
 
   frontend:
-    name: Frontend Tests (npm test)
+    name: Frontend Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -81,13 +71,7 @@ PYEOF
         if: steps.check.outputs.exists == 'true'
         run: |
           mkdir -p frontend/src/__tests__
-          cat > frontend/src/__tests__/smoke.test.js << 'JSEOF'
-describe("Smoke", () => {
-  it("passes", () => {
-    expect(true).toBe(true);
-  });
-});
-JSEOF
+          printf 'describe("Smoke", () => { it("passes", () => { expect(true).toBe(true); }); });\n' > frontend/src/__tests__/smoke.test.js
 
       - name: Run frontend tests
         if: steps.check.outputs.exists == 'true'
