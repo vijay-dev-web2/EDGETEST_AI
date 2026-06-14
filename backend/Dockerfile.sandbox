@@ -1,0 +1,22 @@
+FROM python:3.11-slim
+
+# ── Node.js 20 via NodeSource ──────────────────────────────────────────────
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl \
+ && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+ && apt-get install -y --no-install-recommends nodejs \
+ && rm -rf /var/lib/apt/lists/*
+
+# ── Python test tools ──────────────────────────────────────────────────────
+RUN pip install --no-cache-dir pytest pytest-json-report
+
+# ── JavaScript / TypeScript test tools (global) ───────────────────────────
+RUN npm install -g \
+    jest@29 \
+    ts-jest \
+    @types/jest \
+    typescript \
+ && npm cache clean --force
+
+# No CMD — the command is supplied at `docker run` time.
+# Outbound network is disabled at runtime via --network none.

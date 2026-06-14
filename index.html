@@ -1,0 +1,1720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EdgeTest AI Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ── CSS variables — no dark/light switching ── */
+        :root {
+            --sidebar-bg: #0f1535;
+            --main-bg: #eef1f8;
+            --primary: #3b82f6;
+            --success: #16a34a;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #374151;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #eef1f8;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            color: #374151;
+        }
+
+        /* ── SIDEBAR — permanently dark ── */
+        .sidebar {
+            width: 220px;
+            background-color: #0f1535;
+            border-right: 1px solid rgba(255,255,255,0.08);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .sidebar-header {
+            padding: 24px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background-color: #0f1535;
+        }
+        .logo-box {
+            width: 40px; height: 40px;
+            background-color: rgba(255,255,255,0.08);
+            border-radius: 8px;
+            display: flex; justify-content: center; align-items: center;
+            color: #3b82f6; flex-shrink: 0;
+        }
+        .logo-box svg { width: 24px; height: 24px; }
+        .brand-info h1 { font-size: 16px; font-weight: 700; color: #ffffff; }
+        .brand-info p  { font-size: 11px; color: rgba(255,255,255,0.45); }
+
+        .nav-menu { flex-grow: 1; padding: 10px 0; }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 20px; font-size: 13px;
+            color: #ffffff;
+            background-color: transparent;
+            cursor: pointer; position: relative;
+            user-select: none;
+        }
+        .nav-item:hover { color: #ffffff; background-color: rgba(255,255,255,0.05); }
+        .nav-item.active {
+            background-color: #1e3a8a;
+            color: #ffffff; font-weight: 600;
+            border-left: 3px solid #3b82f6;
+        }
+        .nav-item.active::before {
+            content: none;
+        }
+        .status-circle {
+            width: 16px; height: 16px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            flex-shrink: 0;
+        }
+        .status-completed { background-color: #16a34a; color: #ffffff; }
+        .status-active {
+            background-color: #3b82f6;
+            border: 2px solid rgba(59,130,246,0.4);
+            box-shadow: 0 0 0 4px rgba(59,130,246,0.2);
+        }
+        .status-pending { background-color: rgba(255,255,255,0.10); border: none; color: rgba(255,255,255,0.35); }
+
+        .sidebar-bottom {
+            padding: 20px;
+            background-color: #0f1535;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .risk-pill {
+            background-color: #1e3a8a; color: #60a5fa;
+            font-size: 11px; font-weight: 700;
+            padding: 8px 12px; border-radius: 9999px;
+            text-align: center; margin-bottom: 16px; letter-spacing: 0.5px;
+            border: none;
+        }
+        .bottom-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 8px 0; font-size: 13px;
+            color: rgba(255,255,255,0.40); cursor: pointer;
+        }
+        .bottom-row:hover { color: #ffffff; }
+        .user-avatar {
+            width: 28px; height: 28px; background-color: #3b82f6;
+            border-radius: 50%; display: flex;
+            justify-content: center; align-items: center;
+            font-size: 11px; font-weight: 600; color: #ffffff;
+        }
+
+        /* ── MAIN AREA — permanently light ── */
+        .main-container {
+            flex-grow: 1; position: relative;
+            overflow-y: auto; padding: 40px;
+            background-color: #eef1f8;
+        }
+        .watermark {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 500px; height: 500px;
+            pointer-events: none; z-index: 2;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .watermark-arcs {
+            position: absolute; width: 100%; height: 100%;
+            border: 2px solid rgba(100,130,200,0.08); border-radius: 50%;
+        }
+        .watermark-arcs::before {
+            content: '';
+            position: absolute; top: 10%; left: 10%; right: 10%; bottom: 10%;
+            border: 1px dashed rgba(100,130,200,0.08); border-radius: 50%;
+        }
+        .watermark svg { width: 400px; height: 400px; color: rgba(100,130,200,0.08); }
+        .content-wrapper { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; }
+
+        /* ── BACK BUTTON ── */
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: #ffffff; border: 1px solid #e5e7eb;
+            border-radius: 8px; padding: 6px 14px;
+            font-size: 13px; color: #374151; cursor: pointer;
+            margin-bottom: 20px; font-family: inherit;
+            transition: background 0.15s;
+        }
+        .back-btn:hover { background: #f9fafb; }
+
+        /* ── PAGE HEADER ── */
+        .page-header {
+            display: flex; justify-content: space-between;
+            align-items: flex-start; margin-bottom: 32px;
+        }
+        .header-title-box { display: flex; gap: 16px; }
+        .header-icon {
+            width: 48px; height: 48px; background-color: #ffffff;
+            border-radius: 12px; display: flex;
+            justify-content: center; align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); color: #3b82f6;
+        }
+        .page-title { font-size: 24px; font-weight: 700; color: #0f1535; margin-bottom: 4px; }
+        .page-subtitle { font-size: 14px; color: #6b7280; }
+        .date-badge {
+            display: flex; align-items: center; gap: 8px;
+            background-color: #ffffff; padding: 8px 16px;
+            border-radius: 8px; font-size: 13px; font-weight: 500;
+            color: #374151; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            border: 1px solid #e5e7eb; cursor: pointer;
+        }
+
+        /* ── CARDS ── */
+        .cards-row {
+            display: grid; grid-template-columns: repeat(3,1fr);
+            gap: 24px; margin-bottom: 32px;
+        }
+        .card {
+            background-color: #ffffff; border-radius: 12px;
+            border: 1px solid #e5e7eb; padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+            display: flex; flex-direction: column;
+        }
+        .card-title { font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 8px; }
+        .card-value { font-size: 28px; font-weight: 700; color: #0f1535; }
+
+        /* ── GAUGE ── */
+        .gauge-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+        .gauge { position: relative; width: 120px; height: 120px; margin-bottom: 16px; }
+        .gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+        .gauge-bg { fill: none; stroke: #f3f4f6; stroke-width: 12; }
+        .gauge-progress { fill: none; stroke: #3b82f6; stroke-width: 12; stroke-dasharray: 314; stroke-linecap: round; }
+        .gauge-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+        .gauge-value { font-size: 28px; font-weight: 700; color: #0f1535; line-height: 1; }
+        .gauge-total { font-size: 12px; color: #9ca3af; }
+        .gauge-label { font-size: 14px; font-weight: 600; color: #6b7280; }
+
+        /* ── RISK CARDS ── */
+        .risk-label-card { justify-content: space-between; }
+        .badge-medium { display: inline-block; background-color: #fff7ed; color: #ea580c; border: 1px solid #fb923c; padding: 6px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 16px; width: fit-content; }
+        .badge-high   { display: inline-block; background-color: #fef2f2; color: #ef4444; border: 1px solid #fca5a5; padding: 6px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 16px; width: fit-content; }
+        .badge-low    { display: inline-block; background-color: #f0fdf4; color: #16a34a; border: 1px solid #86efac; padding: 6px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 16px; width: fit-content; }
+        .risk-desc { font-size: 14px; color: #374151; line-height: 1.5; margin-bottom: 24px; }
+        .btn-link { display: flex; align-items: center; gap: 8px; color: #3b82f6; font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; }
+
+        /* ── OVERVIEW ── */
+        .overview-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: #0f1535; margin-bottom: 20px; }
+        .overview-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6; }
+        .overview-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .overview-label { display: flex; align-items: center; gap: 12px; font-size: 13px; color: #374151; font-weight: 500; }
+        .overview-val { font-size: 14px; font-weight: 700; }
+        .val-blue { color: #3b82f6; }
+        .val-red  { color: #ef4444; }
+
+        /* ── FACTOR ROWS ── */
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .section-title { font-size: 18px; font-weight: 700; color: #0f1535; }
+        .factor-list { display: flex; flex-direction: column; gap: 12px; }
+        .factor-row { background-color: #ffffff; border-radius: 10px; border: 1px solid #e5e7eb; padding: 16px; display: flex; align-items: center; gap: 20px; }
+        .factor-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+        .icon-blue   { background-color: #eff6ff; color: #3b82f6; }
+        .icon-purple { background-color: #f5f3ff; color: #7c3aed; }
+        .icon-red    { background-color: #fef2f2; color: #ef4444; }
+        .icon-green  { background-color: #eff6ff; color: #3b82f6; }
+        .icon-orange { background-color: #fff7ed; color: #ea580c; }
+        .factor-info { flex-grow: 1; min-width: 200px; }
+        .factor-name { font-size: 14px; font-weight: 600; color: #0f1535; margin-bottom: 4px; }
+        .factor-desc { font-size: 12px; color: #9ca3af; }
+        .progress-container { width: 150px; height: 6px; background-color: #f3f4f6; border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+        .progress-bar { height: 100%; border-radius: 3px; }
+        .bg-blue   { background-color: #3b82f6; }
+        .bg-purple { background-color: #7c3aed; }
+        .bg-red    { background-color: #ef4444; }
+        .bg-green  { background-color: #3b82f6; }
+        .bg-orange { background-color: #ea580c; }
+        .factor-score { font-size: 14px; font-weight: 700; width: 60px; text-align: right; flex-shrink: 0; }
+        .score-dark { color: #0f1535; }
+        .score-red  { color: #ef4444; }
+        .factor-badge { width: 80px; text-align: center; padding: 4px 0; border-radius: 6px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+        .badge-bg-medium { background-color: #fff7ed; color: #ea580c; border: 1px solid #fb923c; }
+        .badge-bg-high   { background-color: #fef2f2; color: #ef4444; border: 1px solid #fca5a5; }
+        .badge-bg-low    { background-color: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
+
+        /* ── ICONS ── */
+        .icon    { width: 20px; height: 20px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+        .icon-sm { width: 16px; height: 16px; }
+
+        /* ── STEP 1: INGEST ── */
+        .ingest-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; }
+        .code-panel { background: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 24px; }
+        .code-panel label { font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 8px; }
+        .code-textarea {
+            width: 100%; height: 340px; font-family: 'Courier New', monospace;
+            font-size: 12px; line-height: 1.6; padding: 16px;
+            background: #0d1117; color: #e2e8f0; border: 1px solid #374151;
+            border-radius: 8px; resize: vertical; outline: none;
+        }
+        .code-textarea:focus { border-color: #3b82f6; }
+        .lang-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+        .lang-btn { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid #e5e7eb; background: #ffffff; color: #374151; }
+        .lang-btn.active { background: #3b82f6; color: #ffffff; border-color: #3b82f6; }
+        .sidebar-panel { display: flex; flex-direction: column; gap: 16px; }
+        .story-panel { background: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 20px; }
+        .story-panel label { font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 8px; }
+        .story-textarea { width: 100%; height: 120px; font-family: inherit; font-size: 13px; line-height: 1.5; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; resize: vertical; outline: none; color: #374151; }
+        .story-textarea:focus { border-color: #3b82f6; }
+        .config-panel { background: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 20px; }
+        .config-panel label { font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 8px; }
+        .token-input { width: 100%; font-family: inherit; font-size: 12px; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; outline: none; color: #374151; }
+        .token-input:focus { border-color: #3b82f6; }
+        .btn-primary { display: inline-flex; align-items: center; gap: 8px; background: #3b82f6; color: #ffffff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; width: 100%; justify-content: center; margin-top: 12px; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
+        .btn-secondary { display: inline-flex; align-items: center; gap: 8px; background: #ffffff; color: #374151; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; }
+        .btn-secondary:hover { background: #f9fafb; }
+
+        /* ── STEP 2: PSEUDOCODE ── */
+        .pseudo-container {
+            max-height: 420px; overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px; line-height: 1.8;
+            padding: 16px; background: #0d1117; color: #e2e8f0;
+            border-radius: 10px;
+        }
+        .pc-class  { font-size: 15px; font-weight: bold; color: #0f1535; background: #e0e7ff; padding: 4px 8px; border-radius: 4px; margin: 8px 0 4px; display: block; }
+        .pc-func   { font-size: 13px; font-weight: bold; color: #38bdf8; margin: 12px 0 4px; display: block; border-top: 1px solid #1e293b; padding-top: 10px; }
+        .pc-step   { display: block; padding-left: 20px; color: #e2e8f0; }
+        .pc-guard  { display: block; padding-left: 20px; color: #fb923c; }
+        .pc-throws { display: block; padding-left: 20px; color: #f87171; }
+        .pc-return { display: block; padding-left: 20px; color: #4ade80; }
+        .pc-if     { display: block; padding-left: 20px; color: #60a5fa; }
+        .pc-arrow  { display: block; padding-left: 36px; color: #94a3b8; }
+        .pc-line   { display: block; padding-left: 20px; color: #cbd5e1; }
+        .pc-sep    { display: block; height: 16px; }
+        .completeness-bar-wrap { height: 8px; background: #f3f4f6; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+        .completeness-bar { height: 100%; background: #16a34a; border-radius: 4px; }
+
+        /* ── STEP 4: SCENARIOS ── */
+        .scenario-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .scenario-card { background: #ffffff; border-radius: 10px; border: 1px solid #e5e7eb; padding: 16px; cursor: pointer; transition: border-color 0.15s; }
+        .scenario-card:hover { border-color: #93c5fd; }
+        .scenario-card.selected { border-color: #3b82f6; background: #eff6ff; }
+        .scenario-name { font-size: 13px; font-weight: 600; color: #0f1535; margin-bottom: 4px; }
+        .scenario-desc { font-size: 12px; color: #6b7280; line-height: 1.4; }
+        .scenario-meta { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .tag { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 9999px; }
+        .tag-unit        { background: rgba(59,130,246,0.1);  color: #2563eb; }
+        .tag-edge        { background: rgba(245,158,11,0.1);  color: #d97706; }
+        .tag-negative    { background: rgba(239,68,68,0.1);   color: #dc2626; }
+        .tag-integration { background: rgba(139,92,246,0.1);  color: #7c3aed; }
+        .tag-security    { background: rgba(239,68,68,0.1);   color: #dc2626; }
+        .tag-smoke       { background: rgba(16,185,129,0.1);  color: #059669; }
+        .tag-mutation    { background: rgba(249,115,22,0.1);  color: #ea580c; }
+        .tag-business_rule { background: rgba(59,130,246,0.1); color: #1d4ed8; }
+        .tag-high   { background: rgba(239,68,68,0.1);   color: #dc2626; }
+        .tag-medium { background: rgba(245,158,11,0.1);  color: #d97706; }
+        .tag-low    { background: rgba(16,185,129,0.1);  color: #059669; }
+        .selection-info { font-size: 13px; color: #6b7280; margin-bottom: 16px; }
+        .selection-info span { font-weight: 600; color: #374151; }
+
+        /* ── STEP 5: TRACEABILITY ── */
+        .trace-table { width: 100%; border-collapse: collapse; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; }
+        .trace-table th { background: #f8fafc; font-size: 12px; font-weight: 600; color: #6b7280; text-align: left; padding: 12px 16px; border-bottom: 1px solid #e5e7eb; text-transform: uppercase; letter-spacing: 0.5px; }
+        .trace-table td { font-size: 13px; color: #374151; padding: 12px 16px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+        .trace-table tr:last-child td { border-bottom: none; }
+        .trace-table tr:hover td { background: #f9fafb; }
+        .coverage-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: #ffffff; border-radius: 10px; border: 1px solid #e5e7eb; padding: 16px; text-align: center; }
+        .stat-value { font-size: 28px; font-weight: 700; color: #0f1535; }
+        .stat-label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+
+        /* ── STEP 6: SANDBOX ── */
+        .test-file-block { background: #0d1117; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+        .test-file-name { font-size: 12px; font-weight: 600; color: #60a5fa; margin-bottom: 8px; font-family: monospace; }
+        .test-code-pre { font-family: 'Courier New', monospace; font-size: 11px; line-height: 1.6; color: #e2e8f0; white-space: pre-wrap; word-break: break-word; max-height: 280px; overflow-y: auto; }
+        .result-banner { padding: 16px 20px; border-radius: 10px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+        .result-pass { background: rgba(22,163,74,0.1); border: 1px solid rgba(22,163,74,0.3); color: #16a34a; }
+        .result-fail { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.3);  color: #dc2626; }
+        .result-banner h4 { font-size: 15px; font-weight: 700; }
+        .result-banner p  { font-size: 13px; margin-top: 2px; }
+        .failure-item { background: #ffffff; border: 1px solid #fecaca; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; }
+        .failure-name { font-size: 13px; font-weight: 600; color: #dc2626; margin-bottom: 4px; }
+        .failure-msg  { font-size: 12px; color: #6b7280; font-family: monospace; white-space: pre-wrap; }
+
+        /* ── STEP 7: REPORT ── */
+        .export-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-top: 24px; }
+        .export-card { background: #ffffff; border-radius: 10px; border: 1px solid #e5e7eb; padding: 20px; display: flex; align-items: center; gap: 16px; cursor: pointer; transition: border-color 0.15s; }
+        .export-card:hover { border-color: #93c5fd; }
+        .export-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 22px; flex-shrink: 0; }
+        .export-info h4 { font-size: 14px; font-weight: 600; color: #0f1535; }
+        .export-info p  { font-size: 12px; color: #6b7280; margin-top: 2px; }
+
+        /* ── LOADING ── */
+        .loading-overlay { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; gap: 16px; }
+        .spinner { width: 36px; height: 36px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-msg { font-size: 14px; color: #6b7280; }
+
+        /* ── ERROR BANNER ── */
+        .error-banner { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #dc2626; margin-bottom: 16px; display: none; }
+
+        /* ── PROCEED ROW ── */
+        .proceed-row { display: flex; justify-content: flex-end; margin-top: 24px; }
+
+        /* ── STEP VIEW ── */
+        .step-view { display: none; }
+        .step-view.active { display: block; }
+    </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════
+     SIDEBAR — permanently dark #0f1535
+     ════════════════════════════════════ -->
+<div class="sidebar">
+    <div class="sidebar-header">
+        <div class="logo-box" style="background-color: transparent;">
+            <img src="EDGETEST_AI_LOGO.png" alt="EdgeTest AI" style="width: 100%; height: 100%; object-fit: contain;" />
+        </div>
+        <div class="brand-info">
+            <h1>EdgeTest AI</h1>
+            <p>AI-Powered Testing Agent</p>
+        </div>
+    </div>
+
+    <div class="nav-menu" id="navMenu">
+        <div class="nav-item" onclick="navClick(1)" data-step="1">
+            <div class="status-circle status-pending" id="nav-circle-1"></div>
+            <span>Ingest Code</span>
+        </div>
+        <div class="nav-item" onclick="navClick(2)" data-step="2">
+            <div class="status-circle status-pending" id="nav-circle-2"></div>
+            <span>Analyze &amp; Understand</span>
+        </div>
+        <div class="nav-item" onclick="navClick(3)" data-step="3">
+            <div class="status-circle status-pending" id="nav-circle-3"></div>
+            <span>Risk Scoring</span>
+        </div>
+        <div class="nav-item" onclick="navClick(4)" data-step="4">
+            <div class="status-circle status-pending" id="nav-circle-4"></div>
+            <span>Generate Tests</span>
+        </div>
+        <div class="nav-item" onclick="navClick(5)" data-step="5">
+            <div class="status-circle status-pending" id="nav-circle-5"></div>
+            <span>Traceability Map</span>
+        </div>
+        <div class="nav-item" onclick="navClick(6)" data-step="6">
+            <div class="status-circle status-pending" id="nav-circle-6"></div>
+            <span>Execute in Sandbox</span>
+        </div>
+        <div class="nav-item" onclick="navClick(7)" data-step="7">
+            <div class="status-circle status-pending" id="nav-circle-7"></div>
+            <span>Report &amp; Export</span>
+        </div>
+    </div>
+
+    <div class="sidebar-bottom">
+        <div class="risk-pill" id="riskPill">READY TO ANALYZE</div>
+        <div class="bottom-row">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+            <span>Analytics</span>
+        </div>
+        <div class="bottom-row" style="margin-top:8px;">
+            <div class="user-avatar" id="userAvatar">ET</div>
+            <span style="flex-grow:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="userLabel">EdgeTest User</span>
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════
+     MAIN CONTENT — permanently light
+     ════════════════════════════════════ -->
+<div class="main-container">
+
+    <!-- Trident watermark -->
+    <div class="watermark">
+        <div class="watermark-arcs"></div>
+        <img src="EDGETEST_AI_LOGO.png" alt="Watermark" style="width: 400px; height: 400px; object-fit: contain; opacity: 0.03;" />
+    </div>
+
+    <div class="content-wrapper">
+
+        <!-- ══════════════════════════════
+             STEP 1 — INGEST CODE (no back btn)
+             ══════════════════════════════ -->
+        <div id="step-1" class="step-view active">
+            <div class="page-header">
+                <div class="header-title-box">
+                    <div class="header-icon">
+                        <svg class="icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="page-title">Ingest Code</h2>
+                        <p class="page-subtitle">Paste your source code and optional user story to begin analysis.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="error-1" class="error-banner"></div>
+
+            <div class="ingest-grid">
+                <!-- Code input -->
+                <div class="code-panel">
+                    <label>Source Code</label>
+                    <textarea class="code-textarea" id="codeInput" placeholder="Paste your Python, JavaScript, TypeScript, Java, C#, or C++ code here..."></textarea>
+                    <div class="lang-row">
+                        <button class="lang-btn active" onclick="setLang('python',this)">🐍 Python</button>
+                        <button class="lang-btn" onclick="setLang('typescript',this)">🔷 TypeScript</button>
+                        <button class="lang-btn" onclick="setLang('javascript',this)">🟨 JavaScript</button>
+                        <button class="lang-btn" onclick="setLang('java',this)">☕ Java</button>
+                        <button class="lang-btn" onclick="setLang('csharp',this)">💠 C#</button>
+                        <button class="lang-btn" onclick="setLang('cpp',this)">⚙️ C++</button>
+                    </div>
+                </div>
+
+                <!-- Right panel -->
+                <div class="sidebar-panel">
+                    <div class="story-panel">
+                        <label>User Story <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+                        <textarea class="story-textarea" id="userStoryInput" placeholder="As a user, I want to..."></textarea>
+                    </div>
+                    <div class="config-panel">
+                        <label>Backend API Token <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+                        <input type="password" class="token-input" id="tokenInput" placeholder="Bearer token from Supabase login">
+                        <p style="font-size:11px;color:#9ca3af;margin-top:6px;">Leave blank to use demo mode with sample data.</p>
+                    </div>
+                    <button class="btn-primary" id="analyzeBtn" onclick="startAnalysis()">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                        Analyze Code
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             STEP 2 — ANALYZE & UNDERSTAND
+             ══════════════════════════════ -->
+        <div id="step-2" class="step-view">
+            <button class="back-btn" onclick="goBack()">← Back</button>
+
+            <div class="page-header">
+                <div class="header-title-box">
+                    <div class="header-icon">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="page-title">Analyze &amp; Understand</h2>
+                        <p class="page-subtitle">AI-generated pseudocode and completeness analysis.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="error-2" class="error-banner"></div>
+            <div id="loading-2" class="loading-overlay" style="display:none">
+                <div class="spinner"></div>
+                <div class="loading-msg" id="loading-2-msg">Analyzing code...</div>
+            </div>
+
+            <div id="step2-content" style="display:none">
+                <!-- Completeness card -->
+                <div class="cards-row" style="grid-template-columns:1fr 1fr;margin-bottom:24px;">
+                    <div class="card">
+                        <div class="card-title">Completeness Score</div>
+                        <div class="card-value" id="completenessScore">—</div>
+                        <div class="completeness-bar-wrap" style="margin-top:12px;">
+                            <div class="completeness-bar" id="completenessBar" style="width:0%"></div>
+                        </div>
+                        <div style="font-size:12px;color:#6b7280;margin-top:8px;" id="completenessStatus"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Missing Elements</div>
+                        <ul id="missingList" style="font-size:13px;color:#374151;padding-left:18px;margin-top:8px;line-height:2;"></ul>
+                    </div>
+                </div>
+
+                <!-- Pseudocode -->
+                <div class="section-header">
+                    <h3 class="section-title">Structured Pseudocode</h3>
+                </div>
+                <div class="pseudo-container" id="pseudocodeDisplay"></div>
+
+                <div class="proceed-row">
+                    <button class="btn-primary" style="width:auto;" onclick="goToStep(3)">
+                        Proceed to Risk Scoring
+                        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             STEP 3 — RISK SCORING
+             ══════════════════════════════ -->
+        <div id="step-3" class="step-view">
+            <button class="back-btn" onclick="goBack()">← Back</button>
+
+            <div class="page-header">
+                <div class="header-title-box">
+                    <div class="header-icon">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="page-title">Risk Analysis &amp; Scoring</h2>
+                        <p class="page-subtitle">AI-powered risk assessment using 5-factor formula.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="error-3" class="error-banner"></div>
+            <div id="loading-3" class="loading-overlay" style="display:none">
+                <div class="spinner"></div>
+                <div class="loading-msg">Running risk analysis...</div>
+            </div>
+
+            <div id="step3-content" style="display:none">
+                <div class="cards-row">
+                    <div class="card">
+                        <div class="gauge-container">
+                            <div class="gauge">
+                                <svg viewBox="0 0 100 100">
+                                    <circle class="gauge-bg" cx="50" cy="50" r="45"/>
+                                    <circle class="gauge-progress" cx="50" cy="50" r="45" id="gaugeCircle" style="stroke-dashoffset:314;"/>
+                                </svg>
+                                <div class="gauge-text">
+                                    <div class="gauge-value" id="gaugeValue">—</div>
+                                    <div class="gauge-total">/100</div>
+                                </div>
+                            </div>
+                            <div class="gauge-label">Risk Score</div>
+                        </div>
+                    </div>
+                    <div class="card risk-label-card">
+                        <div>
+                            <div id="riskBadge" class="badge-medium">— RISK</div>
+                            <p class="risk-desc" id="riskReason">Analyzing risk factors...</p>
+                        </div>
+                        <a href="#" class="btn-link">View Recommendations
+                            <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </a>
+                    </div>
+                    <div class="card">
+                        <div class="overview-title">Risk Overview
+                            <svg class="icon icon-sm" style="color:#9ca3af" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        </div>
+                        <div class="overview-row">
+                            <div class="overview-label">
+                                <svg class="icon icon-sm" style="color:#6b7280" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                Overall Risk Score
+                            </div>
+                            <div class="overview-val val-blue" id="overviewScore">—</div>
+                        </div>
+                        <div class="overview-row">
+                            <div class="overview-label">
+                                <svg class="icon icon-sm" style="color:#6b7280" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                                Risk Level
+                            </div>
+                            <div class="overview-val val-blue" id="overviewLevel">—</div>
+                        </div>
+                        <div class="overview-row">
+                            <div class="overview-label">
+                                <svg class="icon icon-sm" style="color:#6b7280" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                                High-Risk Functions
+                            </div>
+                            <div class="overview-val val-red" id="overviewFunctions">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-header">
+                    <h3 class="section-title">Risk Factor Breakdown</h3>
+                </div>
+                <div class="factor-list" id="factorList"></div>
+
+                <div class="proceed-row">
+                    <button class="btn-primary" style="width:auto;" onclick="startScenarioDiscovery()">
+                        Generate Test Scenarios
+                        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             STEP 4 — GENERATE TESTS
+             ══════════════════════════════ -->
+        <div id="step-4" class="step-view">
+            <button class="back-btn" onclick="goBack()">← Back</button>
+
+            <div class="page-header">
+                <div class="header-title-box">
+                    <div class="header-icon">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="page-title">Generate Test Scenarios</h2>
+                        <p class="page-subtitle">Select scenarios to include in your test suite.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="error-4" class="error-banner"></div>
+            <div id="loading-4" class="loading-overlay" style="display:none">
+                <div class="spinner"></div>
+                <div class="loading-msg">Discovering test scenarios...</div>
+            </div>
+
+            <div id="step4-content" style="display:none">
+                <div class="selection-info" id="selectionInfo">
+                    <span id="totalScenarios">0</span> scenarios found &nbsp;·&nbsp;
+                    <span id="selectedCount">0</span> selected
+                </div>
+                <div class="scenario-grid" id="scenarioGrid"></div>
+                <div class="proceed-row" style="gap:12px;">
+                    <button class="btn-secondary" onclick="toggleAllScenarios()">Toggle All</button>
+                    <button class="btn-primary" style="width:auto;" onclick="generateTests()">
+                        Generate Tests
+                        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             STEP 5 — TRACEABILITY MAP
+             ══════════════════════════════ -->
+        <div id="step-5" class="step-view">
+            <button class="back-btn" onclick="goBack()">← Back</button>
+
+            <div class="page-header">
+                <div class="header-title-box">
+                    <div class="header-icon">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M6 3v12"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="page-title">Traceability Map</h2>
+                        <p class="page-subtitle">Tests traced to functions and user story requirements.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="error-5" class="error-banner"></div>
+            <div id="loading-5" class="loading-overlay" style="display:none">
+                <div class="spinner"></div>
+                <div class="loading-msg">Computing traceability...</div>
+            </div>
+
+            <div id="step5-content" style="display:none">
+                <div class="coverage-stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="traceFuncCoverage">—%</div>
+                        <div class="stat-label">Function Coverage</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="traceReqCoverage">—%</div>
+                        <div class="stat-label">Requirement Coverage</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="traceHighRisk">—/—</div>
+                        <div class="stat-label">High-Risk Covered</div>
+                    </div>
+                </div>
+                <table class="trace-table" id="traceTable">
+                    <thead>
+                        <tr>
+                            <th>Test Scenario</th>
+                            <th>Functions Covered</th>
+                            <th>Requirements</th>
+                            <th>Risk Level</th>
+                        </tr>
+                    </thead>
+                    <tbody id="traceBody"></tbody>
+                </table>
+                <div class="proceed-row">
+                    <button class="btn-primary" style="width:auto;" onclick="goToStep(6)">
+                        Execute in Sandbox
+                        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             STEP 6 — EXECUTE IN SANDBOX
+             ══════════════════════════════ -->
+        <div id="step-6" class="step-view">
+            <button class="back-btn" onclick="goBack()">← Back</button>
+
+            <div class="page-header">
+                <div class="header-title-box">
+                    <div class="header-icon">
+                        <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="page-title">Execute in Sandbox</h2>
+                        <p class="page-subtitle">Run generated tests in an isolated Docker environment.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="error-6" class="error-banner"></div>
+
+            <div id="step6-content">
+                <div id="generatedFilesDisplay"></div>
+                <div id="sandboxResult" style="display:none"></div>
+                <div class="proceed-row" style="gap:12px;">
+                    <button class="btn-primary" style="width:auto;" id="runSandboxBtn" onclick="runSandbox()">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Run in Sandbox
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             STEP 7 — REPORT & EXPORT
+             ══════════════════════════════ -->
+        <div id="step-7" class="step-view">
+            <button class="back-btn" onclick="goBack()">← Back</button>
+
+            <div class="page-header">
+                <div class="header-title-box">
+                    <div class="header-icon">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="page-title">Report &amp; Export</h2>
+                        <p class="page-subtitle">Download your test suite, reports, and CI workflow.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="step7-content">
+                <div class="cards-row">
+                    <div class="card" style="text-align:center;">
+                        <div class="card-title">Tests Generated</div>
+                        <div class="card-value" id="reportTests">—</div>
+                    </div>
+                    <div class="card" style="text-align:center;">
+                        <div class="card-title">Tests Passed</div>
+                        <div class="card-value" style="color:#10b981;" id="reportPassed">—</div>
+                    </div>
+                    <div class="card" style="text-align:center;">
+                        <div class="card-title">Risk Level</div>
+                        <div class="card-value" id="reportRisk">—</div>
+                    </div>
+                </div>
+                <div class="section-header"><h3 class="section-title">Export Options</h3></div>
+                <div class="export-grid">
+                    <div class="export-card" onclick="exportPdf()">
+                        <div class="export-icon" style="background:rgba(239,68,68,0.1);">📄</div>
+                        <div class="export-info"><h4>PDF Report</h4><p>Full analysis and test summary</p></div>
+                    </div>
+                    <div class="export-card" onclick="exportXlsx()">
+                        <div class="export-icon" style="background:rgba(16,185,129,0.1);">📊</div>
+                        <div class="export-info"><h4>Excel (.xlsx)</h4><p>Scenario matrix and coverage data</p></div>
+                    </div>
+                    <div class="export-card" onclick="exportDocx()">
+                        <div class="export-icon" style="background:rgba(59,130,246,0.1);">📝</div>
+                        <div class="export-info"><h4>Word (.docx)</h4><p>Test case documentation</p></div>
+                    </div>
+                    <div class="export-card" onclick="exportWorkflow()">
+                        <div class="export-icon" style="background:rgba(139,92,246,0.1);">⚙️</div>
+                        <div class="export-info"><h4>GitHub Actions YAML</h4><p>CI/CD workflow for automated testing</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /content-wrapper -->
+</div><!-- /main-container -->
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   STATE
+   ════════════════════════════════════════════════════════════════ */
+const API = 'http://localhost:8000';
+const state = {
+    currentStep: 1,
+    maxReached: 1,
+    code: '',
+    language: 'python',
+    userStory: '',
+    sessionId: null,
+    completeness: null,
+    pseudocode: '',
+    riskResult: null,
+    scenarios: [],           // always Array
+    selectedScenarios: [],   // always Array
+    generatedFiles: [],      // always Array
+    sandboxResult: null,
+    traceabilityData: null,
+    bearerToken: localStorage.getItem('edgetest_token') || '',
+};
+
+/* ════════════════════════════════════════════════════════════════
+   HELPERS
+   ════════════════════════════════════════════════════════════════ */
+
+// Generic safe-array: handles plain arrays, {scenarios:[]}, {items:[]}
+// and JSON strings. Used for non-scenario arrays (files, failures, etc.)
+function safeArray(val) {
+    if (Array.isArray(val)) return val;
+    if (val && typeof val === 'object' && Array.isArray(val.scenarios)) return val.scenarios;
+    if (val && typeof val === 'object' && Array.isArray(val.items)) return val.items;
+    if (typeof val === 'string') {
+        try { const p = JSON.parse(val); return safeArray(p); } catch(e) {}
+    }
+    return [];
+}
+
+// ── STEP 1: extractScenariosArray ───────────────────────────────────────────
+// Handles every possible shape the scenario API can return:
+//   • Plain array                         → returned directly
+//   • { scenarios: [...] }                → .scenarios field
+//   • { test_scenarios: [...] }           → .test_scenarios field
+//   • { tests: [...] }                    → .tests field
+//   • { data: [...] }                     → .data field
+//   • OpenAI raw response with choices    → parsed from content string
+//   • Any JSON string wrapping the above  → recursively unwrapped
+//   • Object with one dominant array      → largest array value used
+function extractScenariosArray(apiResponse) {
+    try {
+        if (!apiResponse) return [];
+
+        let data = apiResponse;
+
+        // Unwrap OpenAI-style response (direct API call or proxied)
+        if (data && data.choices && data.choices[0] && data.choices[0].message) {
+            let content = data.choices[0].message.content;
+            content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+            try { data = JSON.parse(content); } catch(e) { data = content; }
+        }
+
+        // Unwrap JSON string at any level
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch(e) { return []; }
+        }
+
+        console.log('[extractScenariosArray] TYPE:', typeof data, '| isArray:', Array.isArray(data));
+        console.log('[extractScenariosArray] VALUE (first 200 chars):', JSON.stringify(data).slice(0, 200));
+
+        if (Array.isArray(data)) return data;
+
+        // Named array fields — ordered by priority
+        const keys = ['scenarios', 'test_scenarios', 'tests', 'items', 'data', 'results'];
+        for (const k of keys) {
+            if (data[k] && Array.isArray(data[k])) return data[k];
+        }
+
+        // Fallback: find the largest array value in the object
+        if (typeof data === 'object' && data !== null) {
+            const arrays = Object.values(data).filter(v => Array.isArray(v));
+            if (arrays.length > 0) {
+                return arrays.reduce((a, b) => a.length >= b.length ? a : b, []);
+            }
+        }
+
+        return [];
+    } catch(err) {
+        console.error('[extractScenariosArray] failed:', err);
+        return [];
+    }
+}
+
+function getAuthHeaders() {
+    const token = document.getElementById('tokenInput').value.trim()
+                  || state.bearerToken;
+    if (token) {
+        localStorage.setItem('edgetest_token', token);
+        return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+    }
+    return { 'Content-Type': 'application/json' };
+}
+
+async function apiFetch(path, body) {
+    const res = await fetch(API + path, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+        throw new Error(err.detail || `Request failed: ${res.status}`);
+    }
+    return res.json();
+}
+
+async function apiGet(path) {
+    const res = await fetch(API + path, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.blob();
+}
+
+function showError(stepNum, msg) {
+    const el = document.getElementById(`error-${stepNum}`);
+    if (!el) return;
+    el.textContent = '⚠ ' + msg;
+    el.style.display = 'block';
+}
+function clearError(stepNum) {
+    const el = document.getElementById(`error-${stepNum}`);
+    if (el) el.style.display = 'none';
+}
+function showLoading(stepNum, msg) {
+    const el = document.getElementById(`loading-${stepNum}`);
+    if (!el) return;
+    if (msg) { const m = document.getElementById(`loading-${stepNum}-msg`); if (m) m.textContent = msg; }
+    el.style.display = 'flex';
+}
+function hideLoading(stepNum) {
+    const el = document.getElementById(`loading-${stepNum}`);
+    if (el) el.style.display = 'none';
+}
+function showContent(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'block';
+}
+
+/* ════════════════════════════════════════════════════════════════
+   NAVIGATION
+   ════════════════════════════════════════════════════════════════ */
+function goToStep(n) {
+    if (n < 1 || n > 7) return;
+    // Hide current
+    document.getElementById(`step-${state.currentStep}`).classList.remove('active');
+    state.currentStep = n;
+    if (n > state.maxReached) state.maxReached = n;
+    document.getElementById(`step-${n}`).classList.add('active');
+    updateNav();
+    document.querySelector('.main-container').scrollTop = 0;
+}
+
+function goBack() {
+    if (state.currentStep > 1) goToStep(state.currentStep - 1);
+}
+
+function navClick(n) {
+    if (n <= state.maxReached) goToStep(n);
+}
+
+function updateNav() {
+    for (let i = 1; i <= 7; i++) {
+        const item   = document.querySelector(`.nav-item[data-step="${i}"]`);
+        const circle = document.getElementById(`nav-circle-${i}`);
+        item.classList.toggle('active', i === state.currentStep);
+        circle.className = 'status-circle ' + (
+            i < state.currentStep  ? 'status-completed' :
+            i === state.currentStep ? 'status-active' :
+                                      'status-pending'
+        );
+        if (i < state.currentStep) {
+            circle.innerHTML = '<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
+        } else {
+            circle.innerHTML = '';
+        }
+    }
+}
+
+function setLang(lang, btn) {
+    state.language = lang;
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PSEUDOCODE FORMATTER  (fix #7 & #8)
+   ════════════════════════════════════════════════════════════════ */
+function formatPseudocode(text) {
+    if (!text || typeof text !== 'string') return '<span class="pc-line">No pseudocode available.</span>';
+
+    // Split on newlines first; if only 1 line, inject breaks before keywords
+    let lines = text.split('\n');
+    if (lines.length <= 2) {
+        // Single-line / minimal line response — split on keyword patterns
+        const kwPat = /(?=CLASS\s|📌\s*FUNCTION\s|FUNCTION\s|GUARD:|THROWS\s|RETURN\s|IF\s|ELSE IF\s|ELSE\s|\d+\.\s)/g;
+        text = text.replace(kwPat, '\n');
+        lines = text.split('\n');
+    }
+
+    const html = [];
+    for (let raw of lines) {
+        const line = raw.trimEnd();
+        if (!line.trim()) { html.push('<span class="pc-sep"></span>'); continue; }
+
+        if (/^CLASS\s/.test(line.trim())) {
+            html.push(`<span class="pc-class">${esc(line.trim())}</span>`);
+        } else if (/^(📌\s*)?FUNCTION\s/i.test(line.trim())) {
+            html.push(`<span class="pc-func">📌 ${esc(line.trim().replace(/^📌\s*/,''))}</span>`);
+        } else if (/^GUARD:/i.test(line.trim())) {
+            html.push(`<span class="pc-guard">${esc(line)}</span>`);
+        } else if (/^THROWS?\s/i.test(line.trim())) {
+            html.push(`<span class="pc-throws">${esc(line)}</span>`);
+        } else if (/^RETURN\s/i.test(line.trim())) {
+            html.push(`<span class="pc-return">${esc(line)}</span>`);
+        } else if (/^(IF|ELSE IF|ELSE)\s/i.test(line.trim())) {
+            html.push(`<span class="pc-if">${esc(line)}</span>`);
+        } else if (/^\s*→/.test(line) || /^→/.test(line.trim())) {
+            html.push(`<span class="pc-arrow">${esc(line)}</span>`);
+        } else if (/^\s*\d+\.\s/.test(line)) {
+            html.push(`<span class="pc-step">${esc(line)}</span>`);
+        } else {
+            html.push(`<span class="pc-line">${esc(line)}</span>`);
+        }
+    }
+    return html.join('');
+}
+
+function esc(s) {
+    return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   STEP 1 — ANALYZE (kick off pipeline)
+   ════════════════════════════════════════════════════════════════ */
+async function startAnalysis() {
+    const code = document.getElementById('codeInput').value.trim();
+    if (!code) { showError(1, 'Please paste some source code first.'); return; }
+    clearError(1);
+
+    state.code      = code;
+    state.userStory = document.getElementById('userStoryInput').value.trim();
+
+    const btn = document.getElementById('analyzeBtn');
+    btn.disabled = true;
+    btn.textContent = 'Analyzing…';
+
+    goToStep(2);
+    showLoading(2, 'Creating session…');
+
+    try {
+        // Check if demo mode (no token)
+        const token = document.getElementById('tokenInput').value.trim() || state.bearerToken;
+        if (!token) {
+            await runDemoMode();
+            return;
+        }
+
+        // 1. Create session
+        const session = await apiFetch('/api/analyze/sessions', {
+            code: state.code, language: state.language,
+            user_story: state.userStory || null,
+        });
+        state.sessionId = session.session_id;
+
+        // 2. Completeness
+        showLoading(2, 'Checking completeness…');
+        const comp = await apiFetch('/api/analyze/completeness', {
+            code: state.code, language: state.language,
+            user_story: state.userStory || null,
+        });
+        state.completeness = comp;
+
+        // 3. Pseudocode (streaming → collect)
+        showLoading(2, 'Generating pseudocode…');
+        state.pseudocode = await streamPseudocode();
+
+        renderStep2();
+
+    } catch (err) {
+        console.error('[startAnalysis] error:', err);
+        hideLoading(2);
+        showError(2, err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> Analyze Code';
+    }
+}
+
+async function streamPseudocode() {
+    const token = document.getElementById('tokenInput').value.trim() || state.bearerToken;
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API}/api/analyze/pseudocode`, {
+        method: 'POST', credentials: 'include', headers,
+        body: JSON.stringify({
+            code: state.code, ast_json: {},
+            session_id: state.sessionId,
+            user_story: state.userStory || null,
+        }),
+    });
+    if (!res.ok) throw new Error(`Pseudocode API: HTTP ${res.status}`);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '', full = '';
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() || '';
+        for (const ln of lines) {
+            if (!ln.startsWith('data: ')) continue;
+            const tok = ln.slice(6);
+            if (tok === '[DONE]') return full;
+            if (tok.startsWith('[ERROR]')) throw new Error(tok.slice(8).trim());
+            full += tok;
+        }
+    }
+    return full;
+}
+
+function renderStep2() {
+    hideLoading(2);
+
+    // Completeness
+    const comp = state.completeness;
+    if (comp) {
+        const pct = Math.round((comp.completeness_score || 0) * 100);
+        document.getElementById('completenessScore').textContent = pct + '%';
+        document.getElementById('completenessBar').style.width = pct + '%';
+        document.getElementById('completenessStatus').textContent = comp.is_complete ? '✓ Code appears complete' : '⚠ Some elements may be missing';
+        const missing = safeArray(comp.missing_elements);
+        const ul = document.getElementById('missingList');
+        ul.innerHTML = missing.length
+            ? missing.map(m => `<li>${esc(m)}</li>`).join('')
+            : '<li style="list-style:none;color:#10b981;">✓ No missing elements detected</li>';
+    }
+
+    // Pseudocode
+    document.getElementById('pseudocodeDisplay').innerHTML = formatPseudocode(state.pseudocode);
+    showContent('step2-content');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   STEP 3 — RISK SCORING
+   ════════════════════════════════════════════════════════════════ */
+async function loadRiskStep() {
+    clearError(3);
+    showLoading(3);
+    document.getElementById('step3-content').style.display = 'none';
+
+    try {
+        const token = document.getElementById('tokenInput').value.trim() || state.bearerToken;
+        if (!token) { renderRiskDemo(); return; }
+
+        const risk = await apiFetch('/api/analyze/risk', {
+            code: state.code, language: state.language,
+            session_id: state.sessionId || null,
+            user_story: state.userStory || null,
+        });
+        state.riskResult = risk;
+        renderRisk(risk);
+    } catch (err) {
+        console.error('[loadRiskStep] error:', err);
+        hideLoading(3);
+        showError(3, err.message);
+    }
+}
+
+function renderRisk(risk) {
+    hideLoading(3);
+    const score  = Math.round((risk.risk_score || 0) * 100);
+    const level  = (risk.risk_level || 'medium').toUpperCase();
+    const offset = 314 - (314 * score / 100);
+
+    document.getElementById('gaugeValue').textContent   = score;
+    document.getElementById('gaugeCircle').style.strokeDashoffset = offset;
+    document.getElementById('overviewScore').textContent = `${score}/100`;
+    document.getElementById('overviewLevel').textContent = level;
+    const funcs = safeArray(risk.high_risk_functions);
+    document.getElementById('overviewFunctions').textContent = funcs.length;
+
+    const badge = document.getElementById('riskBadge');
+    badge.textContent = level + ' RISK';
+    badge.className = score >= 70 ? 'badge-high' : score >= 40 ? 'badge-medium' : 'badge-low';
+
+    document.getElementById('riskReason').textContent = risk.human_readable_reason || 'Risk analysis complete.';
+
+    // Update sidebar pill
+    document.getElementById('riskPill').textContent = `${level} RISK — ${score}/100`;
+
+    // Factor breakdown
+    const factors = [
+        { name:'Complexity',          desc:'Cyclomatic complexity and code structure',   key:'complexity_score',          icon:'blue',   bar:'bg-blue'   },
+        { name:'Business Impact',     desc:'Impact on business operations',             key:'business_impact_score',     icon:'purple', bar:'bg-purple' },
+        { name:'Dependency Depth',    desc:'Depth of module dependencies',              key:'dependency_depth_score',    icon:'red',    bar:'bg-red'    },
+        { name:'Coverage Gap',        desc:'Test coverage and missing scenarios',       key:'coverage_gap_score',        icon:'green',  bar:'bg-green'  },
+        { name:'Security Sensitivity',desc:'Security risk and vulnerability exposure',  key:'security_sensitivity_score',icon:'orange', bar:'bg-orange' },
+    ];
+    const icons = {
+        blue:   '<svg class="icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+        purple: '<svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+        red:    '<svg class="icon" viewBox="0 0 24 24"><path d="M6 3v12"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>',
+        green:  '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+        orange: '<svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+    };
+
+    const fl = document.getElementById('factorList');
+    fl.innerHTML = factors.map(f => {
+        const raw   = risk[f.key] != null ? risk[f.key] : 0;
+        const pct   = Math.round(raw * 100);
+        const lv    = pct >= 70 ? 'High' : pct >= 40 ? 'Medium' : 'Low';
+        const lvcls = pct >= 70 ? 'badge-bg-high' : pct >= 40 ? 'badge-bg-medium' : 'badge-bg-low';
+        const sccls = pct >= 70 ? 'score-red' : 'score-dark';
+        return `
+        <div class="factor-row">
+            <div class="factor-icon icon-${f.icon}">${icons[f.icon]}</div>
+            <div class="factor-info">
+                <div class="factor-name">${f.name}</div>
+                <div class="factor-desc">${f.desc}</div>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar ${f.bar}" style="width:${pct}%"></div>
+            </div>
+            <div class="factor-score ${sccls}">${pct}/100</div>
+            <div class="factor-badge ${lvcls}">${lv}</div>
+        </div>`;
+    }).join('');
+
+    showContent('step3-content');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   STEP 4 — SCENARIO DISCOVERY  (fix #1 & #2)
+   ════════════════════════════════════════════════════════════════ */
+async function startScenarioDiscovery() {
+    goToStep(4);
+    clearError(4);
+    showLoading(4);
+    document.getElementById('step4-content').style.display = 'none';
+
+    try {
+        const token = document.getElementById('tokenInput').value.trim() || state.bearerToken;
+        if (!token) { renderScenariosDemo(); return; }
+
+        console.log('[startScenarioDiscovery] calling API with pseudocode length:', state.pseudocode.length);
+
+        const raw = await apiFetch('/api/analyze/discover', {
+            code:       state.code,
+            pseudocode: state.pseudocode || '',
+            ast_json:   {},
+            user_story:        state.userStory || null,
+            risk_level:        state.riskResult ? state.riskResult.risk_level : null,
+            high_risk_functions: state.riskResult ? safeArray(state.riskResult.high_risk_functions) : [],
+        });
+
+        // ── STEP 2 debug logs ─────────────────────────────────────────────────
+        console.log('[startScenarioDiscovery] raw TYPE:', typeof raw, '| isArray:', Array.isArray(raw));
+        console.log('[startScenarioDiscovery] raw VALUE (first 200 chars):', JSON.stringify(raw).slice(0, 200));
+
+        // ── STEP 2: Use robust extractor instead of safeArray ─────────────────
+        let allScenarios = extractScenariosArray(raw);
+        console.log('[startScenarioDiscovery] Is Array:', Array.isArray(allScenarios),
+                    '| count:', allScenarios.length);
+
+        // ── STEP 3: Triple-guard every slice ──────────────────────────────────
+        if (!Array.isArray(allScenarios)) allScenarios = [];
+        state.scenarios = Array.isArray(allScenarios) ? allScenarios.slice(0, 50) : [];
+        state.selectedScenarios = state.scenarios
+            .filter(s => s.priority === 'high')
+            .map(s => s.name);
+        if (!state.selectedScenarios.length) {
+            state.selectedScenarios = (Array.isArray(state.scenarios) ? state.scenarios : []).slice(0, 10).map(s => s.name);
+        }
+
+        renderScenarios();
+
+    } catch (err) {
+        console.error('[startScenarioDiscovery] error:', err);
+        hideLoading(4);
+        showError(4, err.message);
+    }
+}
+
+function renderScenarios() {
+    hideLoading(4);
+
+    // Guard: ensure state.scenarios is always an array
+    if (!Array.isArray(state.scenarios)) state.scenarios = [];
+    if (!Array.isArray(state.selectedScenarios)) state.selectedScenarios = [];
+
+    document.getElementById('totalScenarios').textContent = state.scenarios.length;
+    document.getElementById('selectedCount').textContent  = state.selectedScenarios.length;
+
+    const grid = document.getElementById('scenarioGrid');
+    if (!state.scenarios.length) {
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#6b7280;padding:32px;">No scenarios found. Try adding more code or a user story.</div>';
+    } else {
+        grid.innerHTML = state.scenarios.map((s, i) => {
+            const sel = state.selectedScenarios.includes(s.name);
+            return `
+            <div class="scenario-card ${sel ? 'selected' : ''}" onclick="toggleScenario(${i})" id="sc-${i}">
+                <div class="scenario-name">${esc(s.name || 'Unnamed')}</div>
+                <div class="scenario-desc">${esc(s.description || '')}</div>
+                <div class="scenario-meta">
+                    <span class="tag tag-${s.type||'unit'}">${s.type||'unit'}</span>
+                    <span class="tag tag-${s.priority||'medium'}">${s.priority||'medium'}</span>
+                    ${s.edge_case ? '<span class="tag tag-edge">edge case</span>' : ''}
+                </div>
+            </div>`;
+        }).join('');
+    }
+    showContent('step4-content');
+}
+
+function toggleScenario(i) {
+    if (!Array.isArray(state.scenarios)) state.scenarios = [];
+    if (!Array.isArray(state.selectedScenarios)) state.selectedScenarios = [];
+    const name = state.scenarios[i] && state.scenarios[i].name;
+    if (!name) return;
+    const idx = state.selectedScenarios.indexOf(name);
+    if (idx >= 0) state.selectedScenarios.splice(idx, 1);
+    else state.selectedScenarios.push(name);
+    document.getElementById(`sc-${i}`).classList.toggle('selected', idx < 0);
+    document.getElementById('selectedCount').textContent = state.selectedScenarios.length;
+}
+
+function toggleAllScenarios() {
+    if (!Array.isArray(state.scenarios)) state.scenarios = [];
+    if (state.selectedScenarios.length === state.scenarios.length) {
+        state.selectedScenarios = [];
+    } else {
+        state.selectedScenarios = state.scenarios.map(s => s.name);
+    }
+    renderScenarios();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   GENERATE TESTS → STEP 5
+   ════════════════════════════════════════════════════════════════ */
+async function generateTests() {
+    if (!Array.isArray(state.selectedScenarios)) state.selectedScenarios = [];
+    if (!state.selectedScenarios.length) { showError(4, 'Select at least one scenario.'); return; }
+    clearError(4);
+
+    goToStep(5);
+    showLoading(5);
+    document.getElementById('step5-content').style.display = 'none';
+
+    try {
+        const token = document.getElementById('tokenInput').value.trim() || state.bearerToken;
+        if (!token) { renderTraceabilityDemo(); return; }
+
+        // Generate test files
+        showLoading(5, 'Generating test code…');
+        const files = await apiFetch('/api/analyze/generate', {
+            code:                  state.code,
+            language:              state.language,
+            selected_scenario_ids: state.selectedScenarios,
+            session_id:            state.sessionId,
+            user_story:            state.userStory || null,
+        });
+
+        // Guard: always array
+        let allFiles = safeArray(files);
+        if (!Array.isArray(allFiles)) allFiles = [];
+        state.generatedFiles = allFiles;
+
+        // Traceability
+        showLoading(5, 'Computing traceability…');
+        const trace = await apiFetch('/api/analyze/traceability', {
+            code:                state.code,
+            language:            state.language,
+            scenarios:           state.scenarios.filter(s => state.selectedScenarios.includes(s.name))
+                                     .map(s => ({ name: s.name, type: s.type, description: s.description })),
+            session_id:          state.sessionId,
+            user_story:          state.userStory || null,
+            high_risk_functions: state.riskResult ? safeArray(state.riskResult.high_risk_functions) : [],
+        });
+        state.traceabilityData = trace;
+        renderTraceability(trace);
+
+    } catch (err) {
+        console.error('[generateTests] error:', err);
+        hideLoading(5);
+        showError(5, err.message);
+    }
+}
+
+function renderTraceability(trace) {
+    hideLoading(5);
+    if (!trace) { showError(5, 'No traceability data returned.'); return; }
+
+    document.getElementById('traceFuncCoverage').textContent = Math.round(trace.function_coverage_pct || 0) + '%';
+    document.getElementById('traceReqCoverage').textContent  = Math.round(trace.requirement_coverage_pct || 0) + '%';
+    document.getElementById('traceHighRisk').textContent     = `${trace.high_risk_covered||0}/${trace.high_risk_total||0}`;
+
+    const matrix = safeArray(trace.matrix);
+    const tbody  = document.getElementById('traceBody');
+    tbody.innerHTML = matrix.map(row => {
+        const funcs = safeArray(row.covers_functions).join(', ') || '—';
+        const reqs  = safeArray(row.covers_requirements).join(', ') || '—';
+        const rl    = row.risk_level || 'low';
+        const cls   = rl === 'high' ? 'val-red' : rl === 'medium' ? '' : '';
+        return `
+        <tr>
+            <td>${esc(row.scenario_name||'')}</td>
+            <td style="font-family:monospace;font-size:12px;">${esc(funcs)}</td>
+            <td>${esc(reqs)}</td>
+            <td class="${cls}" style="font-weight:600;text-transform:capitalize;">${esc(rl)}</td>
+        </tr>`;
+    }).join('') || '<tr><td colspan="4" style="text-align:center;color:#6b7280;padding:24px;">No matrix data</td></tr>';
+
+    showContent('step5-content');
+    renderGeneratedFiles();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   STEP 6 — SANDBOX
+   ════════════════════════════════════════════════════════════════ */
+function renderGeneratedFiles() {
+    if (!Array.isArray(state.generatedFiles)) state.generatedFiles = [];
+    const el = document.getElementById('generatedFilesDisplay');
+    el.innerHTML = state.generatedFiles.map(f => `
+        <div class="test-file-block">
+            <div class="test-file-name">📄 ${esc(f.filename||'test_file')}</div>
+            <pre class="test-code-pre">${esc(f.code||'')}</pre>
+        </div>`).join('') || '<p style="color:#6b7280;font-size:13px;">No test files generated yet.</p>';
+}
+
+async function runSandbox() {
+    clearError(6);
+    const btn = document.getElementById('runSandboxBtn');
+    btn.disabled = true;
+    btn.textContent = 'Running…';
+    document.getElementById('sandboxResult').style.display = 'none';
+
+    try {
+        const token = document.getElementById('tokenInput').value.trim() || state.bearerToken;
+        if (!token) { renderSandboxDemo(); return; }
+
+        const result = await apiFetch('/api/sandbox/run', {
+            session_id: state.sessionId,
+            language:   state.language,
+        });
+        state.sandboxResult = result;
+        renderSandboxResult(result);
+        goToStep(7);
+        renderReportStep();
+    } catch (err) {
+        console.error('[runSandbox] error:', err);
+        showError(6, err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="icon icon-sm" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run in Sandbox';
+    }
+}
+
+function renderSandboxResult(result) {
+    const el = document.getElementById('sandboxResult');
+    const passed = result.passed || 0;
+    const total  = result.total  || 0;
+    const failed = result.failed || 0;
+    const isPass = failed === 0;
+    const failures = safeArray(result.failures);
+
+    el.innerHTML = `
+        <div class="result-banner ${isPass ? 'result-pass' : 'result-fail'}">
+            <div>
+                <h4>${isPass ? '✓ All Tests Passed' : `✗ ${failed} Test${failed>1?'s':''} Failed`}</h4>
+                <p>${passed}/${total} tests passed</p>
+            </div>
+        </div>
+        ${failures.map(f => `
+        <div class="failure-item">
+            <div class="failure-name">${esc(f.test_name||'Unknown test')}</div>
+            <div class="failure-msg">${esc(f.error_message||'')}</div>
+        </div>`).join('')}`;
+    el.style.display = 'block';
+}
+
+/* ════════════════════════════════════════════════════════════════
+   STEP 7 — REPORT
+   ════════════════════════════════════════════════════════════════ */
+function renderReportStep() {
+    if (!Array.isArray(state.generatedFiles)) state.generatedFiles = [];
+    document.getElementById('reportTests').textContent  = state.generatedFiles.length;
+    const sr = state.sandboxResult;
+    document.getElementById('reportPassed').textContent = sr ? `${sr.passed}/${sr.total}` : '—';
+    const rr = state.riskResult;
+    document.getElementById('reportRisk').textContent   = rr ? (rr.risk_level||'').toUpperCase() : '—';
+}
+
+async function exportPdf() {
+    if (!state.sessionId) { alert('Run analysis first.'); return; }
+    try { const blob = await apiGet(`/api/report/${state.sessionId}/pdf`); downloadBlob(blob, 'edgetest-report.pdf'); }
+    catch(e) { alert('Export failed: ' + e.message); }
+}
+async function exportXlsx() {
+    if (!state.sessionId) { alert('Run analysis first.'); return; }
+    try { const blob = await apiGet(`/api/export/${state.sessionId}/xlsx`); downloadBlob(blob, 'edgetest-scenarios.xlsx'); }
+    catch(e) { alert('Export failed: ' + e.message); }
+}
+async function exportDocx() {
+    if (!state.sessionId) { alert('Run analysis first.'); return; }
+    try { const blob = await apiGet(`/api/export/${state.sessionId}/docx`); downloadBlob(blob, 'edgetest-tests.docx'); }
+    catch(e) { alert('Export failed: ' + e.message); }
+}
+async function exportWorkflow() {
+    if (!state.sessionId) { alert('Run analysis first.'); return; }
+    try {
+        const blob = await fetch(`${API}/api/export/workflow`, {
+            method: 'POST', headers: getAuthHeaders(),
+            body: JSON.stringify({
+                session_id: state.sessionId, language: state.language,
+                test_file_paths: safeArray(state.generatedFiles).map(f => f.filename),
+                dependency_file: state.language === 'python' ? 'requirements.txt' : 'package.json',
+            }),
+        }).then(r => r.blob());
+        downloadBlob(blob, 'edgetest-ci.yml');
+    } catch(e) { alert('Export failed: ' + e.message); }
+}
+function downloadBlob(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   DEMO MODE — rich sample data when no token is provided
+   ════════════════════════════════════════════════════════════════ */
+async function runDemoMode() {
+    await new Promise(r => setTimeout(r, 800));
+    state.completeness = {
+        is_complete: true, completeness_score: 0.82,
+        missing_elements: ['Type hints on return values', 'Docstrings on public methods'],
+    };
+    state.pseudocode = `CLASS Calculator:
+
+📌 FUNCTION add(a, b):
+   1. VALIDATE inputs a and b are numeric
+      → GUARD: if not numeric, THROWS TypeError
+   2. RETURN sum of a and b
+
+📌 FUNCTION divide(a, b):
+   1. VALIDATE b is not zero
+      → GUARD: if b == 0, THROWS ValueError("Cannot divide by zero")
+   2. RETURN a divided by b
+
+📌 FUNCTION sqrt(n):
+   1. VALIDATE n is not negative
+      → GUARD: if n < 0, THROWS ValueError("Cannot sqrt negative")
+   2. RETURN square root of n`;
+
+    renderStep2();
+    state.riskResult = {
+        risk_score: 0.62, risk_level: 'medium',
+        complexity_score: 0.68, business_impact_score: 0.70,
+        dependency_depth_score: 0.45, coverage_gap_score: 0.60,
+        security_sensitivity_score: 0.65,
+        human_readable_reason: 'Moderate complexity with several edge-case paths. Division and sqrt require careful boundary testing.',
+        high_risk_functions: ['divide', 'sqrt'],
+        recommended_test_types: ['unit', 'edge', 'negative'],
+    };
+}
+
+function renderRiskDemo() {
+    hideLoading(3);
+    renderRisk(state.riskResult || {
+        risk_score: 0.62, risk_level: 'medium',
+        complexity_score: 0.68, business_impact_score: 0.70,
+        dependency_depth_score: 0.45, coverage_gap_score: 0.60,
+        security_sensitivity_score: 0.65,
+        human_readable_reason: 'Demo mode — moderate risk detected.',
+        high_risk_functions: ['divide', 'sqrt'],
+    });
+}
+
+function renderScenariosDemo() {
+    hideLoading(4);
+    state.scenarios = [
+        { name:'test_add_positive_numbers',   type:'unit',     priority:'high',   description:'Verify add() returns correct sum for positive inputs.',          edge_case:false },
+        { name:'test_add_zero',               type:'edge',     priority:'medium', description:'Verify add() works when one operand is zero.',                    edge_case:true  },
+        { name:'test_divide_by_zero',         type:'negative', priority:'high',   description:'Verify divide() raises ValueError when denominator is zero.',     edge_case:true  },
+        { name:'test_divide_normal',          type:'unit',     priority:'high',   description:'Verify divide() returns correct quotient for valid inputs.',       edge_case:false },
+        { name:'test_sqrt_negative',          type:'negative', priority:'high',   description:'Verify sqrt() raises ValueError for negative input.',             edge_case:true  },
+        { name:'test_sqrt_zero',              type:'edge',     priority:'medium', description:'Verify sqrt(0) returns 0.',                                       edge_case:true  },
+        { name:'test_sqrt_perfect_square',    type:'unit',     priority:'medium', description:'Verify sqrt() returns exact integer for perfect squares.',        edge_case:false },
+        { name:'test_add_large_numbers',      type:'edge',     priority:'low',    description:'Verify add() handles very large numeric values without overflow.', edge_case:true  },
+        { name:'test_divide_float_result',    type:'unit',     priority:'medium', description:'Verify divide() handles non-integer quotients correctly.',         edge_case:false },
+        { name:'test_add_type_error',         type:'negative', priority:'medium', description:'Verify add() raises TypeError when passed non-numeric inputs.',    edge_case:true  },
+    ];
+    state.selectedScenarios = state.scenarios.filter(s => s.priority === 'high').map(s => s.name);
+    renderScenarios();
+}
+
+function renderTraceabilityDemo() {
+    hideLoading(5);
+    state.traceabilityData = {
+        function_coverage_pct: 100, requirement_coverage_pct: 85,
+        high_risk_covered: 2, high_risk_total: 2,
+        matrix: (Array.isArray(state.scenarios) ? state.scenarios : []).slice(0, 6).map(s => ({
+            scenario_name: s.name, covers_functions: ['divide','sqrt','add'].slice(0,2),
+            covers_requirements: ['REQ-001'], risk_level: s.priority === 'high' ? 'high' : 'medium',
+        })),
+    };
+    state.generatedFiles = [{
+        filename: 'test_calculator.py',
+        code: `import pytest\nfrom calculator import Calculator\n\nclass TestCalculator:\n    def setup_method(self):\n        self.calc = Calculator()\n\n    def test_add_positive_numbers(self):\n        assert self.calc.add(2, 3) == 5\n\n    def test_divide_by_zero(self):\n        with pytest.raises(ValueError, match="Cannot divide by zero"):\n            self.calc.divide(10, 0)\n\n    def test_sqrt_negative(self):\n        with pytest.raises(ValueError):\n            self.calc.sqrt(-1)\n`,
+    }];
+    renderTraceability(state.traceabilityData);
+    renderGeneratedFiles();
+}
+
+function renderSandboxDemo() {
+    state.sandboxResult = { total: 10, passed: 9, failed: 1, failures: [
+        { test_name: 'test_add_large_numbers', error_message: 'AssertionError: expected float, got int', traceback: '' }
+    ]};
+    renderSandboxResult(state.sandboxResult);
+    goToStep(7);
+    renderReportStep();
+    document.getElementById('runSandboxBtn').disabled = false;
+    document.getElementById('runSandboxBtn').innerHTML = '<svg class="icon icon-sm" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run in Sandbox';
+}
+
+/* ════════════════════════════════════════════════════════════════
+   STEP WATCHER — trigger data loads when entering certain steps
+   ════════════════════════════════════════════════════════════════ */
+const _originalGoToStep = goToStep;
+// Wrap goToStep to trigger step-specific loaders
+(function(){
+    const orig = goToStep;
+    window.goToStep = function(n) {
+        orig(n);
+        if (n === 3 && !state.riskResult) loadRiskStep();
+        if (n === 6) renderGeneratedFiles();
+        if (n === 7) renderReportStep();
+    };
+})();
+
+/* ════════════════════════════════════════════════════════════════
+   INIT
+   ════════════════════════════════════════════════════════════════ */
+updateNav();
+
+// Pre-fill demo code
+document.getElementById('codeInput').value = `class Calculator:
+    def add(self, a, b):
+        return a + b
+
+    def divide(self, a, b):
+        if b == 0:
+            raise ValueError("Cannot divide by zero")
+        return a / b
+
+    def sqrt(self, n):
+        if n < 0:
+            raise ValueError("Cannot take square root of a negative number")
+        return n ** 0.5
+`;
+
+// Restore saved token
+if (state.bearerToken) {
+    document.getElementById('tokenInput').value = state.bearerToken;
+}
+</script>
+</body>
+</html>

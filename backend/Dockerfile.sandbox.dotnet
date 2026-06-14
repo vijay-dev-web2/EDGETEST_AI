@@ -1,0 +1,17 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0-slim
+
+# ── xUnit + Moq via a pre-created global tool project ─────────────────────
+# We bake a minimal test project into the image so dotnet test can run
+# against /tests without needing NuGet access at sandbox time.
+WORKDIR /sandbox-template
+RUN dotnet new xunit -n SandboxTemplate --no-restore \
+ && dotnet add SandboxTemplate/SandboxTemplate.csproj package Moq \
+ && dotnet add SandboxTemplate/SandboxTemplate.csproj package xunit \
+ && dotnet add SandboxTemplate/SandboxTemplate.csproj package xunit.runner.visualstudio \
+ && dotnet add SandboxTemplate/SandboxTemplate.csproj package Microsoft.NET.Test.Sdk \
+ && dotnet restore SandboxTemplate/SandboxTemplate.csproj \
+ && dotnet build SandboxTemplate/SandboxTemplate.csproj --no-restore -c Release \
+ && rm -rf /root/.nuget/tmp
+
+# No CMD — supplied at docker run time via sandbox.py.
+# Outbound network is disabled at runtime via --network none.

@@ -1,0 +1,71 @@
+name: EdgeTest AI — C# Tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  COVERAGE_THRESHOLD: {{ coverage_threshold | default(80) }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run unit tests
+        run: |
+          dotnet test --no-build --configuration Release \
+            --filter "Category=Unit" \
+            --logger "trx;LogFileName=unit-results.trx" \
+            --collect:"XPlat Code Coverage" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+
+      - name: Run integration tests
+        run: |
+          dotnet test --no-build --configuration Release \
+            --filter "Category=Integration" \
+            --logger "trx;LogFileName=integration-results.trx" \
+            --collect:"XPlat Code Coverage" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+
+      - name: Enforce coverage threshold (Cobertura)
+        run: |
+          python3 -c "
+          import glob, xml.etree.ElementTree as ET, sys, os
+          files = glob.glob('**/coverage.cobertura.xml', recursive=True)
+          if not files:
+              print('No coverage file found — skipping threshold check')
+              sys.exit(0)
+          tree = ET.parse(files[0])
+          rate = float(tree.getroot().attrib.get('line-rate', 0)) * 100
+          threshold = int(os.environ['COVERAGE_THRESHOLD'])
+          print(f'Coverage: {rate:.1f}%')
+          if rate < threshold:
+              print(f'Coverage {rate:.1f}% is below threshold {threshold}%')
+              sys.exit(1)
+          "
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            **/*.trx
+            **/coverage.cobertura.xml

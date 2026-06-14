@@ -1,0 +1,105 @@
+name: EdgeTest AI — Generated Tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  COVERAGE_THRESHOLD: "{{ coverage_threshold | default('') }}"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+{% if language == "python" %}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-json-report pytest-cov
+          {% if dependency_file != "requirements.txt" or True %}pip install -r {{ dependency_file }} || true{% endif %}
+
+      - name: Run tests
+        run: |
+          pytest {{ test_paths | join(" ") }} -v --tb=short \
+            --json-report --json-report-file=test-results.json \
+            --cov=. --cov-report=term-missing --cov-report=xml:coverage.xml
+
+{% if coverage_threshold %}
+      - name: Enforce coverage threshold
+        run: |
+          python - <<'EOF'
+          import json, sys
+          with open("coverage.json") as f:
+              data = json.load(f)
+          total = data.get("totals", {}).get("percent_covered", 0)
+          threshold = {{ coverage_threshold }}
+          print(f"Coverage: {total:.1f}% (threshold: {threshold}%)")
+          if total < threshold:
+              print(f"FAIL: coverage {total:.1f}% is below threshold {threshold}%")
+              sys.exit(1)
+          print("PASS: coverage threshold met")
+          EOF
+{% endif %}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            test-results.json
+            coverage.xml
+
+{% elif language in ("javascript", "typescript") %}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests with coverage
+        run: |
+          npx jest {{ test_paths | join(" ") }} \
+            --coverage --coverageReporters=json-summary \
+            --json --outputFile=jest-results.json || true
+
+{% if coverage_threshold %}
+      - name: Enforce coverage threshold
+        run: |
+          node -e "
+          const fs = require('fs');
+          const summary = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+          const pct = summary.total.lines.pct;
+          const threshold = {{ coverage_threshold }};
+          console.log('Coverage: ' + pct + '% (threshold: ' + threshold + '%)');
+          if (pct < threshold) {
+            console.error('FAIL: Coverage ' + pct + '% is below threshold ' + threshold + '%');
+            process.exit(1);
+          }
+          console.log('PASS: coverage threshold met');
+          "
+{% endif %}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            jest-results.json
+            coverage/
+
+{% endif %}

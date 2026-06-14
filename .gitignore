@@ -1,0 +1,49 @@
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env
+.env.local
+.env.*.local
+
+# ── Node.js ──────────────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+
+# ── Caches and Logs ──────────────────────────────────────────────────────────
+.pytest_cache/
+.eslintcache
+*.log
+.DS_Store
+Thumbs.db
+document.md:Zone.Identifier
+
+# ── Binary Packages and Large Generated Artifacts ────────────────────────────
+*.deb
+*.pdf
+edgetest-ai-summary.html
+
+# ── Output directories ────────────────────────────────────────────────────────
+edgetest_output/
+demo_output/
+edgetest_ai.egg-info/
+
+# ── Windows sidecar files ─────────────────────────────────────────────────────
+*:Zone.Identifier
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+
+# ── Coverage ──────────────────────────────────────────────────────────────────
+.coverage
+htmlcov/
+coverage.json
+.mypy_cache/

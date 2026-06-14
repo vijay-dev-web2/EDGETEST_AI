@@ -1,0 +1,126 @@
+services:
+
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16
+    container_name: edgetest_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       edgetest
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:         ["CMD-SHELL", "pg_isready -U postgres -d edgetest"]
+      interval:     10s
+      timeout:      5s
+      retries:      5
+      start_period: 10s
+    networks:
+      - edgetest_net
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: edgetest_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test:         ["CMD", "redis-cli", "ping"]
+      interval:     10s
+      timeout:      5s
+      retries:      5
+      start_period: 5s
+    networks:
+      - edgetest_net
+
+  # ── Backend (FastAPI) ──────────────────────────────────────────────────────
+  backend:
+    build: ./backend
+    container_name: edgetest_backend
+    restart: unless-stopped
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    env_file:
+      - ./backend/.env
+    environment:
+      # Override localhost URLs from .env with Docker service-name equivalents
+      DATABASE_URL:          postgresql+asyncpg://postgres:postgres@postgres:5432/edgetest
+      REDIS_URL:             redis://redis:6379/0
+      CELERY_BROKER_URL:     redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    volumes:
+      # Allow backend to launch the Docker sandbox container
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - edgetest_net
+
+  # ── Celery worker ──────────────────────────────────────────────────────────
+  celery:
+    build: ./backend
+    container_name: edgetest_celery
+    restart: unless-stopped
+    command: celery -A tasks worker --loglevel=info
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL:          postgresql+asyncpg://postgres:postgres@postgres:5432/edgetest
+      REDIS_URL:             redis://redis:6379/0
+      CELERY_BROKER_URL:     redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - edgetest_net
+
+  # ── Frontend (Next.js) ─────────────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    container_name: edgetest_frontend
+    restart: unless-stopped
+    environment:
+      NEXTAUTH_URL:          ${NEXTAUTH_URL:-http://localhost}
+      NEXTAUTH_SECRET:       ${NEXTAUTH_SECRET}
+      GITHUB_CLIENT_ID:      ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET:  ${GITHUB_CLIENT_SECRET}
+    depends_on:
+      - backend
+    networks:
+      - edgetest_net
+
+  # ── Nginx (reverse proxy) ──────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: edgetest_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - edgetest_net
+
+# ── Named volumes ──────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+
+# ── Networks ───────────────────────────────────────────────────────────────────
+networks:
+  edgetest_net:
+    driver: bridge

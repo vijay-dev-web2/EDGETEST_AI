@@ -1,0 +1,29 @@
+FROM eclipse-temurin:21-jdk-slim
+
+# ── JUnit 5 Platform Console Standalone ────────────────────────────────────
+# Download the fat-jar that can compile + run JUnit 5 tests without Maven/Gradle
+ARG JUNIT_VERSION=1.10.2
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl \
+ && mkdir -p /usr/local/lib \
+ && curl -fsSL -o /usr/local/lib/junit-platform-console-standalone.jar \
+    "https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/${JUNIT_VERSION}/junit-platform-console-standalone-${JUNIT_VERSION}.jar" \
+ && apt-get purge -y curl \
+ && rm -rf /var/lib/apt/lists/*
+
+# ── Mockito + required dependencies ────────────────────────────────────────
+ARG MOCKITO_VERSION=5.11.0
+ARG BYTE_BUDDY_VERSION=1.14.12
+ARG OBJENESIS_VERSION=3.3
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+ && curl -fsSL -o /usr/local/lib/mockito-core.jar \
+    "https://repo1.maven.org/maven2/org/mockito/mockito-core/${MOCKITO_VERSION}/mockito-core-${MOCKITO_VERSION}.jar" \
+ && curl -fsSL -o /usr/local/lib/byte-buddy.jar \
+    "https://repo1.maven.org/maven2/net/bytebuddy/byte-buddy/${BYTE_BUDDY_VERSION}/byte-buddy-${BYTE_BUDDY_VERSION}.jar" \
+ && curl -fsSL -o /usr/local/lib/objenesis.jar \
+    "https://repo1.maven.org/maven2/org/objenesis/objenesis/${OBJENESIS_VERSION}/objenesis-${OBJENESIS_VERSION}.jar" \
+ && apt-get purge -y curl \
+ && rm -rf /var/lib/apt/lists/*
+
+# No CMD — supplied at docker run time via sandbox.py.
+# Outbound network is disabled at runtime via --network none.

@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>EdgeTest AI — Test Analysis Report</title>
+  <style>
+    /* ── Page setup ─────────────────────────────────────────────────────── */
+    @page {
+      size: A4;
+      margin: 15mm 14mm 20mm 14mm;
+      @bottom-left   { content: element(run-footer-left);   font-size: 7pt; color: #64748b; }
+      @bottom-right  { content: element(run-footer-right);  font-size: 7pt; color: #64748b; }
+      @bottom-center {
+        content: "Page " counter(page) " of " counter(pages);
+        font-size: 7pt; color: #94a3b8;
+      }
+    }
+    #run-footer-left  { position: running(run-footer-left);  font-size: 7pt; }
+    #run-footer-right { position: running(run-footer-right); font-size: 7pt; }
+
+    /* ── Reset ──────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 9.5pt;
+      color: #1e293b;
+      background: white;
+      line-height: 1.45;
+    }
+
+    /* ── Page-break helpers ─────────────────────────────────────────────── */
+    .page-break      { break-before: page; }
+    .no-break-inside { break-inside: avoid; }
+
+    /* ════════════════════════════════════════════════════════════════════ */
+    /* PAGE 1 — COVER                                                       */
+    /* ════════════════════════════════════════════════════════════════════ */
+
+    .cover-hero {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 20mm 14mm 14mm;
+      border-radius: 0 0 12px 12px;
+      margin-bottom: 8mm;
+    }
+    .cover-eyebrow {
+      font-size: 8pt;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #38bdf8;
+      margin-bottom: 5mm;
+    }
+    .cover-title {
+      font-size: 32pt;
+      font-weight: 900;
+      letter-spacing: -1px;
+      color: #f8fafc;
+      line-height: 1.1;
+      margin-bottom: 3mm;
+    }
+    .cover-title .accent { color: #38bdf8; }
+    .cover-subtitle {
+      font-size: 11pt;
+      color: #94a3b8;
+      margin-bottom: 8mm;
+    }
+    .cover-divider {
+      border: none;
+      border-top: 1px solid #334155;
+      margin: 6mm 0;
+    }
+    .cover-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4mm;
+    }
+    .cover-meta-item { }
+    .cover-meta-label { font-size: 7.5pt; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; }
+    .cover-meta-value { font-size: 9pt; font-weight: 600; color: #e2e8f0; word-break: break-all; }
+    .cover-meta-value.mono { font-family: 'Courier New', monospace; font-size: 8pt; }
+
+    .cover-footer-bar {
+      margin-top: 8mm;
+      background: #1e3a5f;
+      border-radius: 6px;
+      padding: 5mm 8mm;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .cover-footer-bar span { font-size: 8pt; color: #93c5fd; }
+    .cover-risk-badge {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 999px;
+      font-size: 9pt;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .cover-risk-high   { background: #fef2f2; color: #b91c1c; }
+    .cover-risk-medium { background: #fffbeb; color: #b45309; }
+    .cover-risk-low    { background: #f0fdf4; color: #15803d; }
+    .cover-risk-na     { background: #f1f5f9; color: #64748b; }
+
+    /* ════════════════════════════════════════════════════════════════════ */
+    /* SHARED SECTION HEADER                                                */
+    /* ════════════════════════════════════════════════════════════════════ */
+
+    .section-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 7mm;
+    }
+    .section-header {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 7px 12px;
+      font-size: 9pt;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+    .section-body { padding: 10px 12px; }
+
+    /* ════════════════════════════════════════════════════════════════════ */
+    /* PAGE 2 — EXECUTIVE SUMMARY                                           */
+    /* ════════════════════════════════════════════════════════════════════ */
+
+    .page-title {
+      font-size: 14pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 6mm;
+      padding-bottom: 3mm;
+      border-bottom: 2px solid #0f172a;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 7mm;
+    }
+    .stat-card {
+      text-align: center;
+      padding: 10px 6px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    .stat-value { font-size: 24pt; font-weight: 900; line-height: 1; }
+    .stat-label { font-size: 7pt; color: #64748b; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .stat-total  .stat-value { color: #1e293b; background: #f8fafc; }
+    .stat-total  { background: #f8fafc; }
+    .stat-pass   .stat-value { color: #16a34a; }
+    .stat-pass   { background: #f0fdf4; border-color: #86efac; }
+    .stat-fail   .stat-value { color: #dc2626; }
+    .stat-fail   { background: #fef2f2; border-color: #fca5a5; }
+    .stat-rate   .stat-value { color: #0369a1; }
+    .stat-rate   { background: #eff6ff; border-color: #bfdbfe; }
+
+    .bar-track { height: 10px; border-radius: 999px; background: #fee2e2; overflow: hidden; margin-bottom: 4px; }
+    .bar-fill  { height: 100%; background: #22c55e; border-radius: 999px; }
+    .bar-legend { font-size: 7.5pt; color: #64748b; display: flex; gap: 12px; margin-bottom: 7mm; }
+    .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 3px; vertical-align: middle; }
+    .dot-pass { background: #22c55e; }
+    .dot-fail { background: #ef4444; }
+
+    /* Risk analysis summary card */
+    .risk-summary-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 7mm;
+    }
+    .risk-summary-header {
+      background: linear-gradient(90deg, #0f172a, #1e3a5f);
+      color: #f8fafc;
+      padding: 7px 12px;
+      font-size: 9pt;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .risk-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 8pt;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .risk-high   { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .risk-medium { background: #fffbeb; color: #b45309; border: 1px solid #fcd34d; }
+    .risk-low    { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+    .risk-na     { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+
+    .risk-gauge-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+    .risk-gauge-track { flex: 1; height: 14px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+    .gauge-fill-high   { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #f97316, #ef4444); }
+    .gauge-fill-medium { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+    .gauge-fill-low    { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #4ade80, #22c55e); }
+    .gauge-fill-na     { height: 100%; border-radius: 999px; background: #94a3b8; }
+    .risk-gauge-label  { font-size: 11pt; font-weight: 800; min-width: 60px; text-align: right; }
+    .gauge-mono { font-family: 'Courier New', monospace; font-size: 8pt; color: #475569; margin-top: 3px; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .score-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+    .score-name  { font-size: 8pt; color: #475569; width: 150px; flex-shrink: 0; }
+    .score-mini-track { flex: 1; height: 8px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+    .score-mini-fill  { height: 100%; border-radius: 999px; background: #3b82f6; }
+    .score-num   { font-size: 8pt; font-weight: 600; width: 44px; text-align: right; flex-shrink: 0; }
+
+    .factor-list { list-style: none; padding: 0; margin: 4px 0; }
+    .factor-list li { font-size: 8.5pt; padding: 3px 0 3px 14px; position: relative; border-bottom: 1px solid #f1f5f9; }
+    .factor-list li:last-child { border-bottom: none; }
+    .factor-list li::before { content: "•"; position: absolute; left: 2px; color: #3b82f6; font-weight: 700; }
+
+    .tag-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 7.5pt; font-weight: 600; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .tag-fn { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+
+    .cov-row { display: flex; gap: 8px; margin-bottom: 6mm; }
+    .cov-card { flex: 1; text-align: center; padding: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
+    .cov-value { font-size: 18pt; font-weight: 800; color: #0369a1; }
+    .cov-label { font-size: 7.5pt; color: #64748b; text-transform: uppercase; }
+
+    .sub-heading {
+      font-size: 8pt; font-weight: 700; color: #475569; text-transform: uppercase;
+      letter-spacing: 0.07em; margin: 8px 0 4px; padding-bottom: 3px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .risk-formula-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 6mm;
+      font-family: 'Courier New', monospace;
+      font-size: 8pt;
+      color: #334155;
+    }
+    .risk-formula-box .formula-title { font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin-bottom: 4px; }
+
+    /* ════════════════════════════════════════════════════════════════════ */
+    /* PAGE 3 — MODULE OVERVIEW                                             */
+    /* ════════════════════════════════════════════════════════════════════ */
+
+    .module-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 5mm;
+      break-inside: avoid;
+    }
+    .module-card-header {
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 8px 12px;
+      font-size: 9pt;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .module-card-body { padding: 8px 12px; }
+    .module-stat-row { display: flex; gap: 10px; margin-bottom: 6px; }
+    .module-stat { flex: 1; text-align: center; padding: 5px; background: #f8fafc; border-radius: 4px; border: 1px solid #e2e8f0; }
+    .module-stat-val { font-size: 14pt; font-weight: 800; color: #1e293b; }
+    .module-stat-lbl { font-size: 6.5pt; color: #94a3b8; text-transform: uppercase; }
+    .module-stat.pass .module-stat-val { color: #16a34a; }
+    .module-stat.fail .module-stat-val { color: #dc2626; }
+    .module-functions { font-size: 8pt; color: #475569; margin-top: 5px; }
+    .module-fn-tag { display: inline-block; padding: 1px 6px; margin: 2px 2px 0 0; background: #f1f5f9; border-radius: 4px; border: 1px solid #e2e8f0; font-family: 'Courier New', monospace; font-size: 7.5pt; color: #334155; }
+
+    /* ════════════════════════════════════════════════════════════════════ */
+    /* PAGE 4+ — TEST CASE DETAIL CARDS                                     */
+    /* ════════════════════════════════════════════════════════════════════ */
+
+    .test-module-section-header {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 8px 12px;
+      font-size: 9.5pt;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      border-radius: 6px 6px 0 0;
+      margin-top: 6mm;
+    }
+
+    .test-case-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 0 0 8px 8px;
+      margin-bottom: 6mm;
+      break-inside: avoid;
+    }
+    .test-case-card + .test-case-card { border-radius: 8px; }
+
+    .test-case-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      border-radius: 8px 8px 0 0;
+    }
+    .test-case-number { font-size: 8pt; font-weight: 700; color: #64748b; }
+    .test-status-pass { color: #16a34a; font-weight: 800; font-size: 10pt; }
+    .test-status-fail { color: #dc2626; font-weight: 800; font-size: 10pt; }
+    .test-status-skip { color: #94a3b8; font-weight: 800; font-size: 10pt; }
+
+    .test-case-body { padding: 10px 12px; }
+
+    .test-name-row { font-size: 10pt; font-weight: 700; color: #0f172a; margin-bottom: 5px; font-family: 'Courier New', monospace; }
+    .test-meta-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 999px;
+      font-size: 7.5pt; font-weight: 600;
+    }
+    .badge-unit        { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .badge-integration { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; }
+    .badge-edge        { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .badge-negative    { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .badge-security    { background: #fce7f3; color: #9d174d; border: 1px solid #fbcfe8; }
+    .badge-smoke       { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+    .badge-mutation    { background: #f5f3ff; color: #5b21b6; border: 1px solid #ddd6fe; }
+    .badge-business_rule { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+
+    .pri-high   { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .pri-medium { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    .pri-low    { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+
+    .test-field-label { font-size: 7.5pt; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; margin-top: 7px; }
+    .test-field-value { font-size: 8.5pt; color: #334155; line-height: 1.5; }
+    .test-field-value.mono { font-family: 'Courier New', monospace; font-size: 8pt; color: #1e293b; }
+
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      border-radius: 6px;
+      padding: 6px 10px;
+      margin-top: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 8pt;
+      color: #991b1b;
+      word-break: break-all;
+    }
+    .error-box-label { font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #dc2626; margin-bottom: 3px; }
+
+    .code-block-wrapper { margin-top: 8px; }
+    .code-block-header {
+      background: #1e293b;
+      color: #38bdf8;
+      font-family: 'Courier New', monospace;
+      font-size: 7.5pt;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 6px 6px 0 0;
+    }
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: 'Courier New', monospace;
+      font-size: 7pt;
+      line-height: 1.5;
+      padding: 10px;
+      border-radius: 0 0 6px 6px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+    }
+
+    /* ════════════════════════════════════════════════════════════════════ */
+    /* TRACEABILITY MATRIX                                                   */
+    /* ════════════════════════════════════════════════════════════════════ */
+
+    table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+    thead tr { background: #1e293b; color: #f8fafc; }
+    th { padding: 6px 8px; text-align: left; font-weight: 600; font-size: 7.5pt; letter-spacing: 0.05em; text-transform: uppercase; }
+    td { padding: 5px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    tr:last-child td { border-bottom: none; }
+    .mono { font-family: 'Courier New', monospace; font-size: 7.5pt; }
+    .text-muted { color: #64748b; }
+    .text-center { text-align: center; }
+    .icon-pass { color: #16a34a; font-weight: 800; }
+    .icon-fail { color: #dc2626; font-weight: 800; }
+    .icon-skip { color: #94a3b8; }
+
+    /* ════════════════════════════════════════════════════════════════════ */
+    /* CI/CD SECTION                                                         */
+    /* ════════════════════════════════════════════════════════════════════ */
+
+    .cicd-step {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 6px;
+      align-items: flex-start;
+    }
+    .cicd-step-num {
+      flex-shrink: 0;
+      width: 20px; height: 20px;
+      background: #0f172a;
+      color: #38bdf8;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 8pt; font-weight: 800;
+    }
+    .cicd-step-content { font-size: 8.5pt; color: #334155; line-height: 1.5; }
+    .cicd-step-title { font-weight: 700; color: #0f172a; }
+
+    .cicd-note {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 8pt;
+      color: #1d4ed8;
+      margin-top: 5mm;
+    }
+  </style>
+</head>
+<body>
+
+{# Running footer elements #}
+<div id="run-footer-left">EdgeTest AI &nbsp;|&nbsp; Session: {{ session_id[:8] }} &nbsp;|&nbsp; Team Trident Tech — Sona College of Technology</div>
+<div id="run-footer-right">{{ generated_at }}</div>
+
+{# Computed variables #}
+{% set total    = total_tests %}
+{% set pass_pct = pass_rate | int %}
+{% set risk_filled = [((risk_score | int) // 10), 10] | min %}
+{% set rl = risk_level | lower %}
+
+
+{# ════════════════════════════════════════════════════════════════════════ #}
+{# PAGE 1 — COVER PAGE                                                      #}
+{# ════════════════════════════════════════════════════════════════════════ #}
+
+<div class="cover-hero">
+  <div class="cover-eyebrow">Capgemini Exceller AgentifAI Buildathon · Problem #38</div>
+  <div class="cover-title"><span class="accent">EdgeTest</span> AI</div>
+  <div class="cover-subtitle">AI-Generated Risk-Aware Test Suite — Test Analysis Report</div>
+  <hr class="cover-divider"/>
+  <div class="cover-meta-grid">
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Session ID</div>
+      <div class="cover-meta-value mono">{{ session_id }}</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Generated</div>
+      <div class="cover-meta-value">{{ generated_at }}</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Language</div>
+      <div class="cover-meta-value">{{ language | upper }}</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Repository</div>
+      <div class="cover-meta-value mono">{{ repo_url if repo_url else "Direct Code Input" }}</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Risk Level</div>
+      <div class="cover-meta-value">
+        <span class="cover-risk-badge cover-risk-{{ rl }}">{{ rl | upper }}</span>
+      </div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Analyzed By</div>
+      <div class="cover-meta-value">EdgeTest AI — Team Trident Tech</div>
+    </div>
+  </div>
+  <div class="cover-footer-bar">
+    <span>Sona College of Technology · 2025</span>
+    <span>{{ total }} Tests · {{ passed }} Passed · {{ failed }} Failed · {{ pass_rate }}% Pass Rate</span>
+  </div>
+</div>
+
+
+{# ════════════════════════════════════════════════════════════════════════ #}
+{# PAGE 2 — EXECUTIVE SUMMARY                                               #}
+{# ════════════════════════════════════════════════════════════════════════ #}
+
+<div class="page-break">
+  <div class="page-title">Executive Summary</div>
+
+  {# Four metric boxes #}
+  <div class="stats-grid">
+    <div class="stat-card stat-total">
+      <div class="stat-value">{{ total }}</div>
+      <div class="stat-label">Total Tests</div>
+    </div>
+    <div class="stat-card stat-pass">
+      <div class="stat-value">{{ passed }}</div>
+      <div class="stat-label">Passed</div>
+    </div>
+    <div class="stat-card stat-fail">
+      <div class="stat-value">{{ failed }}</div>
+      <div class="stat-label">Failed</div>
+    </div>
+    <div class="stat-card stat-rate">
+      <div class="stat-value">{{ pass_rate }}%</div>
+      <div class="stat-label">Pass Rate</div>
+    </div>
+  </div>
+
+  <div class="bar-track"><div class="bar-fill" style="width:{{ pass_pct }}%;"></div></div>
+  <div class="bar-legend">
+    <span><span class="dot dot-pass"></span>{{ passed }} passing</span>
+    <span><span class="dot dot-fail"></span>{{ failed }} failing</span>
+    {% if total > 0 %}
+    <span style="margin-left:auto; font-weight:600; color:{% if pass_rate >= 80 %}#16a34a{% elif pass_rate >= 50 %}#b45309{% else %}#dc2626{% endif %};">
+      {% if pass_rate >= 80 %}GOOD{% elif pass_rate >= 50 %}NEEDS WORK{% else %}CRITICAL{% endif %}
+    </span>
+    {% endif %}
+  </div>
+
+  {# Risk Analysis Summary #}
+  <div class="risk-summary-card">
+    <div class="risk-summary-header">
+      <span>Risk Analysis Summary</span>
+      <span class="risk-badge risk-{{ rl }}">{{ rl | upper }} RISK</span>
+    </div>
+    <div class="section-body">
+      <div class="risk-gauge-row">
+        <div class="risk-gauge-track">
+          <div class="gauge-fill-{{ rl }}" style="width:{{ risk_score }}%;"></div>
+        </div>
+        <div class="risk-gauge-label" style="color: {% if rl == 'high' %}#b91c1c{% elif rl == 'medium' %}#b45309{% else %}#15803d{% endif %};">
+          {{ risk_score | int }}/100
+        </div>
+      </div>
+      <div class="gauge-mono">{{ '█' * risk_filled }}{{ '░' * (10 - risk_filled) }} &nbsp; {{ risk_score | int }}/100 &nbsp; {{ rl | upper }} RISK</div>
+
+      {% if risk_reason %}
+      <div class="test-field-label" style="margin-top:8px;">AI Risk Assessment</div>
+      <div class="test-field-value" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:7px 10px; margin-top:3px;">
+        {{ risk_reason }}
+      </div>
+      {% endif %}
+
+      {% if high_risk_functions %}
+      <div class="test-field-label" style="margin-top:8px;">High Risk Functions Identified</div>
+      <div class="tag-list">
+        {% for fn in high_risk_functions %}<span class="tag tag-fn">{{ fn }}</span>{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Risk formula reminder #}
+  <div class="risk-formula-box">
+    <div class="formula-title">Risk Scoring Formula (5 Factors)</div>
+    Score = (Complexity × 0.25) + (Business Impact × 0.30) + (Dependency Depth × 0.20) + (Coverage Gap × 0.25)
+    {% if risk_json %}
+    <div style="margin-top:6px; display:grid; grid-template-columns:repeat(5,1fr); gap:4px;">
+      {% for label, key in [("Complexity","complexity_score"),("Business Impact","business_impact_score"),("Dep. Depth","dependency_depth_score"),("Coverage Gap","coverage_gap_score"),("Security","security_sensitivity_score")] %}
+      <div style="text-align:center; background:#f1f5f9; border-radius:4px; padding:3px;">
+        <div style="font-size:11pt; font-weight:800; color:#0f172a;">{{ risk_json.get(key, 0) | int }}</div>
+        <div style="font-size:6.5pt; color:#64748b;">{{ label }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  {# Coverage summary #}
+  <div class="cov-row" style="flex-wrap: wrap;">
+    <div class="cov-card">
+      <div class="cov-value">{{ function_coverage_pct }}%</div>
+      <div class="cov-label">Function Coverage</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-value">{{ branch_coverage_pct }}%</div>
+      <div class="cov-label">Branch Coverage</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-value">{{ guard_coverage_pct }}%</div>
+      <div class="cov-label">Guard Coverage</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-value">{{ bva_coverage_pct }}%</div>
+      <div class="cov-label">BVA Coverage</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-value">{{ exception_coverage_pct }}%</div>
+      <div class="cov-label">Exception Coverage</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-value">{{ test_cases | length }}</div>
+      <div class="cov-label">Test Cases</div>
+    </div>
+  </div>
+
+</div>
+
+
+{# ════════════════════════════════════════════════════════════════════════ #}
+{# PAGE 3 — MODULE OVERVIEW                                                 #}
+{# ════════════════════════════════════════════════════════════════════════ #}
+
+{% if module_analysis %}
+<div class="page-break">
+  <div class="page-title">Module Analysis</div>
+
+  {% for mod in module_analysis %}
+  <div class="module-card no-break-inside">
+    <div class="module-card-header">
+      <span>📦 Module: {{ mod.module_name }}</span>
+      <span style="font-size:8pt; font-weight:400; color:#94a3b8;">{{ mod.test_count }} test{{ "s" if mod.test_count != 1 else "" }}</span>
+    </div>
+    <div class="module-card-body">
+      <div class="module-stat-row">
+        <div class="module-stat">
+          <div class="module-stat-val">{{ mod.test_count }}</div>
+          <div class="module-stat-lbl">Tests</div>
+        </div>
+        <div class="module-stat pass">
+          <div class="module-stat-val">{{ mod.passed }}</div>
+          <div class="module-stat-lbl">Passed</div>
+        </div>
+        <div class="module-stat fail">
+          <div class="module-stat-val">{{ mod.failed }}</div>
+          <div class="module-stat-lbl">Failed</div>
+        </div>
+        <div class="module-stat">
+          <div class="module-stat-val">{{ mod.functions | length }}</div>
+          <div class="module-stat-lbl">Functions</div>
+        </div>
+      </div>
+      {% if mod.functions %}
+      <div class="module-functions">
+        <span style="font-size:7.5pt; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:0.06em;">Functions Under Test: </span>
+        {% for fn in mod.functions %}<span class="module-fn-tag">{{ fn }}</span>{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+
+{# ════════════════════════════════════════════════════════════════════════ #}
+{# PAGE 4+ — TEST CASE DETAIL CARDS (grouped by module)                    #}
+{# ════════════════════════════════════════════════════════════════════════ #}
+
+{% if module_analysis %}
+<div class="page-break">
+  <div class="page-title">Test Cases — Detailed View</div>
+
+  {% for mod in module_analysis %}
+
+  <div class="test-module-section-header">
+    📦 Module: {{ mod.module_name }} &nbsp;|&nbsp; {{ mod.test_count }} Test Cases
+    &nbsp;|&nbsp; {{ mod.passed }} Passed · {{ mod.failed }} Failed
+  </div>
+
+  {% for tc in mod.test_cases %}
+  {% set status = tc.get("status", "unknown") %}
+
+  <div class="test-case-card no-break-inside">
+    <div class="test-case-header">
+      <div>
+        <span class="test-case-number">TEST CASE #{{ tc.index }}</span>
+        &nbsp;·&nbsp;
+        <span class="mono" style="font-size:9pt; color:#1e293b; font-weight:700;">{{ tc.func_name }}</span>
+      </div>
+      {% if status == "passed" %}
+        <span class="test-status-pass">✓ PASSED</span>
+      {% elif status == "failed" %}
+        <span class="test-status-fail">✗ FAILED</span>
+      {% else %}
+        <span class="test-status-skip">— {{ status | upper }}</span>
+      {% endif %}
+    </div>
+
+    <div class="test-case-body">
+      {# Badges row #}
+      <div class="test-meta-row">
+        {% set ttype = tc.get("type", "unit") %}
+        <span class="badge badge-{{ ttype }}">{{ ttype | upper | replace("_"," ") }} TEST</span>
+        {% set pri = (tc.get("priority") or "medium") | lower %}
+        {% if pri in ("high","medium","low") %}
+          <span class="badge pri-{{ pri }}">{{ pri | upper }} PRIORITY</span>
+        {% endif %}
+        {% if tc.module_name %}
+          <span class="badge" style="background:#f1f5f9; color:#334155; border:1px solid #e2e8f0;">Module: {{ tc.module_name }}</span>
+        {% endif %}
+        {% if tc.function_under_test %}
+          <span class="badge" style="background:#fefce8; color:#713f12; border:1px solid #fef08a; font-family:'Courier New',monospace;">fn: {{ tc.function_under_test }}()</span>
+        {% endif %}
+      </div>
+
+      {# Description #}
+      {% if tc.get("description") %}
+      <div class="test-field-label">Description</div>
+      <div class="test-field-value">{{ tc.description }}</div>
+      {% endif %}
+
+      {# Risk coverage note for high-priority tests #}
+      {% if pri == "high" and high_risk_functions %}
+      <div class="test-field-label">Risk Coverage</div>
+      <div class="test-field-value" style="color:#b45309;">
+        Tests HIGH RISK function: {{ tc.function_under_test }}() — prioritized by AI risk scoring
+      </div>
+      {% endif %}
+
+      {# Execution result #}
+      <div class="test-field-label">Execution Result</div>
+      <div style="display:flex; gap:10px; margin-top:3px;">
+        <div style="flex:1; background:{% if status=='passed' %}#f0fdf4{% elif status=='failed' %}#fef2f2{% else %}#f8fafc{% endif %}; border:1px solid {% if status=='passed' %}#86efac{% elif status=='failed' %}#fca5a5{% else %}#e2e8f0{% endif %}; border-radius:5px; padding:5px 8px;">
+          <span style="font-weight:700; color:{% if status=='passed' %}#16a34a{% elif status=='failed' %}#dc2626{% else %}#64748b{% endif %};">
+            {% if status == "passed" %}✓ PASSED{% elif status == "failed" %}✗ FAILED{% else %}{{ status | upper }}{% endif %}
+          </span>
+          {% set dur = tc.get("duration", 0) %}
+          {% if dur %}
+          &nbsp;·&nbsp; <span style="color:#64748b; font-size:8pt;">{{ dur }}ms</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Error details for failed tests #}
+      {% if status == "failed" and tc.get("error_message") %}
+      <div class="error-box">
+        <div class="error-box-label">Error Details</div>
+        {{ tc.get("error_message", "") }}
+        {% if tc.get("traceback") and tc.traceback != tc.get("error_message","") %}
+        <div style="margin-top:4px; color:#7f1d1d; font-size:7pt; opacity:0.8;">{{ tc.traceback | truncate(300, True, "…") }}</div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {# Test code #}
+      {% if tc.test_code %}
+      <div class="code-block-wrapper">
+        <div class="code-block-header">TEST CODE — {{ tc.func_name }}</div>
+        <pre>{{ tc.test_code }}</pre>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  {% endfor %}{# end test case loop #}
+  {% endfor %}{# end module loop #}
+</div>
+{% elif enriched_tests %}
+
+{# Fallback: flat test list if no module analysis available #}
+<div class="page-break">
+  <div class="page-title">Test Cases</div>
+  <div class="section-card">
+    <div class="section-header">All Tests ({{ total }} total)</div>
+    <div class="section-body" style="padding:0;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:28px;">#</th>
+            <th>Test Name</th>
+            <th style="width:80px;">Type</th>
+            <th style="width:56px;">Priority</th>
+            <th style="width:56px;">Status</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in enriched_tests %}
+          {% set status = t.get("status","unknown") %}
+          <tr class="no-break-inside">
+            <td class="text-center text-muted" style="font-size:7pt;">{{ loop.index }}</td>
+            <td class="mono" style="word-break:break-all;">{{ t.get("test_name","") }}</td>
+            <td><span class="badge badge-{{ t.get('type','unit') }}">{{ t.get('type','unit') }}</span></td>
+            <td>
+              {% set pri = (t.get("priority") or "-") | lower %}
+              {% if pri in ("high","medium","low") %}<span class="badge pri-{{ pri }}">{{ pri | upper }}</span>{% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+            <td class="text-center">
+              {% if status == "passed" %}<span class="icon-pass">✓</span>{% elif status == "failed" %}<span class="icon-fail">✗</span>{% else %}<span class="icon-skip">—</span>{% endif %}
+            </td>
+            <td style="font-size:8pt; color:#475569;">
+              {{ t.get("description","") }}
+              {% if status == "failed" and t.get("error_message") %}
+              <div style="margin-top:3px; color:#dc2626; font-family:'Courier New',monospace; font-size:7pt;">✗ {{ t.get("error_message","") | truncate(100,True,"…") }}</div>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% if test_code_files %}
+  <div class="section-card" style="margin-top:6mm;">
+    <div class="section-header">Generated Test Code</div>
+    <div class="section-body">
+      {% for file in test_code_files %}
+      <div class="code-block-header">📄 {{ file.name }}</div>
+      <pre>{{ file.content }}</pre>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+
+{# ════════════════════════════════════════════════════════════════════════ #}
+{# TRACEABILITY MATRIX                                                       #}
+{# ════════════════════════════════════════════════════════════════════════ #}
+
+{% if traceability_map %}
+{% set tm = traceability_map %}
+<div class="page-break">
+  <div class="page-title">Traceability Matrix</div>
+  <p style="font-size:8.5pt; color:#475569; margin-bottom:6mm;">Every test mapped to its source function and requirement — ensuring zero ambiguity in test coverage.</p>
+
+  <div class="cov-row">
+    <div class="cov-card">
+      <div class="cov-value">{{ tm.get("function_coverage_pct",0) }}%</div>
+      <div class="cov-label">Function Coverage</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-value">{{ tm.get("requirement_coverage_pct",0) }}%</div>
+      <div class="cov-label">Requirement Coverage</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-value">{{ tm.get("high_risk_covered",0) }}/{{ tm.get("high_risk_total",0) }}</div>
+      <div class="cov-label">High-Risk Functions Covered</div>
+    </div>
+  </div>
+
+  {% set matrix = tm.get("matrix",[]) %}
+  {% if matrix %}
+  <div class="section-card">
+    <div class="section-header">Test ↔ Function ↔ Requirement Map</div>
+    <div class="section-body" style="padding:0;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:24px;">#</th>
+            <th>Test / Scenario Name</th>
+            <th>Module</th>
+            <th>Covers Functions</th>
+            <th style="width:68px;">Risk Level</th>
+            <th style="width:56px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tc in test_cases %}
+          <tr class="no-break-inside">
+            <td class="text-center text-muted" style="font-size:7pt;">{{ tc.index }}</td>
+            <td class="mono" style="word-break:break-all; font-size:7.5pt;">{{ tc.func_name }}</td>
+            <td style="font-size:8pt;">{{ tc.module_name }}</td>
+            <td style="font-size:8pt; font-family:'Courier New',monospace;">{{ tc.function_under_test }}()</td>
+            <td>
+              {% set pri = (tc.get("priority") or "medium") | lower %}
+              <span class="risk-badge risk-{% if pri == 'high' %}high{% elif pri == 'low' %}low{% else %}medium{% endif %}" style="font-size:7pt;">{{ pri | upper }}</span>
+            </td>
+            <td class="text-center">
+              {% set s = tc.get("status","unknown") %}
+              {% if s == "passed" %}<span class="icon-pass" style="color:#16a34a;">✓</span>{% elif s == "failed" %}<span class="icon-fail" style="color:#dc2626;">✗</span>{% else %}<span class="icon-skip">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {% if not test_cases %}
+          {% for row in matrix %}
+          <tr class="no-break-inside">
+            <td class="text-center text-muted" style="font-size:7pt;">{{ loop.index }}</td>
+            <td class="mono" style="word-break:break-all;">{{ row.get("scenario_name","") }}</td>
+            <td style="font-size:8pt;">—</td>
+            <td style="font-size:8pt;">{{ row.get("covers_functions",[]) | join(", ") or "—" }}</td>
+            <td>
+              {% set rl2 = (row.get("risk_level") or "na") | lower %}
+              <span class="risk-badge risk-{{ rl2 }}" style="font-size:7pt;">{{ rl2 | upper }}</span>
+            </td>
+            <td class="text-center">—</td>
+          </tr>
+          {% endfor %}
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="margin-top:4mm; padding:8px 10px; background:#f0fdf4; border:1px solid #86efac; border-radius:6px; font-size:8pt; color:#15803d;">
+    <strong>Total functions tested: {{ test_cases | map(attribute="function_under_test") | list | unique | list | length }}</strong>
+    {% if tm.get("high_risk_total",0) > 0 %}
+    &nbsp;·&nbsp; {{ tm.get("high_risk_covered",0) }}/{{ tm.get("high_risk_total",0) }} HIGH RISK functions have test coverage
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+
+{# ════════════════════════════════════════════════════════════════════════ #}
+{# LAST PAGE — CI/CD INTEGRATION                                             #}
+{# ════════════════════════════════════════════════════════════════════════ #}
+
+<div class="page-break">
+  <div class="page-title">CI/CD Integration</div>
+  <p style="font-size:8.5pt; color:#475569; margin-bottom:6mm;">
+    Save the following GitHub Actions workflow to automatically run generated tests on every push and pull request.
+  </p>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-bottom:6mm;">
+    {% for step_num, title, desc in [
+      (1, "Trigger", "Runs on push and pull_request to main branch"),
+      (2, "Environment", "Ubuntu latest with Python 3.11 or Node 20"),
+      (3, "Install Dependencies", "Installs project requirements via pip or npm"),
+      (4, "Run Tests", "Executes the generated test suite with verbose output"),
+      (5, "Upload Artifacts", "Stores test results for download from Actions UI"),
+    ] %}
+    <div class="cicd-step no-break-inside">
+      <div class="cicd-step-num">{{ step_num }}</div>
+      <div class="cicd-step-content">
+        <div class="cicd-step-title">{{ title }}</div>
+        {{ desc }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if github_actions_yaml %}
+  <div class="code-block-header" style="border-radius:6px 6px 0 0;">📄 .github/workflows/edgetest-tests.yml</div>
+  <pre style="border-radius:0 0 6px 6px;">{{ github_actions_yaml }}</pre>
+  {% endif %}
+
+  <div class="cicd-note">
+    💡 <strong>How to activate:</strong> Create the file <code>.github/workflows/edgetest-tests.yml</code> in your repository
+    with the content above. GitHub Actions will automatically run your tests on every push and pull request to main.
+  </div>
+</div>
+
+</body>
+</html>

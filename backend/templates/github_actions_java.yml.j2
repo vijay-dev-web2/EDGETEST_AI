@@ -1,0 +1,52 @@
+name: EdgeTest AI — Java Tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  COVERAGE_THRESHOLD: {{ coverage_threshold | default(80) }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Run unit tests
+        run: mvn -B test --no-transfer-progress
+
+      - name: Run integration tests
+        run: mvn -B verify -DskipUnitTests=false --no-transfer-progress
+
+      - name: Enforce coverage threshold (JaCoCo)
+        run: |
+          mvn -B jacoco:check \
+            -Djacoco.haltOnFailure=true \
+            -Djacoco.minimum.coverage=${{ '{{' }} env.COVERAGE_THRESHOLD {{ '}}' }} \
+            --no-transfer-progress
+
+      - name: Upload Surefire reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+
+      - name: Upload JaCoCo coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jacoco-coverage
+          path: target/site/jacoco/

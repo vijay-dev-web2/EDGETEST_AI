@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "edgetest-ai"
+version = "0.1.0"
+description = "AI-powered edge-case test generator"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+edgetest = "cli:main"
+
+[tool.setuptools]
+py-modules = ["cli"]
