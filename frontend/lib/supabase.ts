@@ -1,5 +1,6 @@
 import { createBrowserClient } from "@supabase/auth-helpers-nextjs"
 import { createClient } from "@supabase/supabase-js"
+import { DEV_BYPASS_ENABLED, DEV_BYPASS_TOKEN } from "@/lib/devBypass"
 
 const client = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,11 +8,11 @@ const client = createBrowserClient(
 )
 
 const isBrowser = typeof window !== 'undefined';
-const hasBypass = isBrowser && (localStorage.getItem('dev_bypass') === 'true' || document.cookie.includes('dev_bypass=true'));
+const hasBypass = DEV_BYPASS_ENABLED && isBrowser && (localStorage.getItem('dev_bypass') === 'true' || document.cookie.includes('dev_bypass=true'));
 
 if (isBrowser && hasBypass) {
   const mockSession = {
-    access_token: "dev-mock-token",
+    access_token: DEV_BYPASS_TOKEN,
     token_type: "bearer",
     expires_in: 3600,
     refresh_token: "mock-refresh",

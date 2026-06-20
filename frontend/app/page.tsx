@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Shield, Network, Rocket, ChevronRight, CheckCircle2, Zap } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { DEV_BYPASS_ENABLED, DEV_BYPASS_TOKEN } from "@/lib/devBypass";
 
 function GithubIcon({ className }: { className?: string }) {
   return (
@@ -47,10 +48,11 @@ export default function LandingPage() {
   };
 
   const handleDemoSignIn = async () => {
+    if (!DEV_BYPASS_ENABLED) return;
     try {
       localStorage.setItem("dev_bypass", "true");
       document.cookie = "dev_bypass=true; path=/; max-age=3600;";
-      document.cookie = "sb-access-token=dev-mock-token; path=/; max-age=3600;";
+      document.cookie = `sb-access-token=${DEV_BYPASS_TOKEN}; path=/; max-age=3600;`;
       window.location.href = "/dashboard?demo=1";
     } catch (err: any) {
       console.error("Error in demo sign-in:", err);
@@ -130,12 +132,14 @@ export default function LandingPage() {
                     Sign in with GitHub to Start
                     <ChevronRight className="w-4 h-4 opacity-80" />
                   </button>
-                  <button
-                    onClick={handleDemoSignIn}
-                    className="flex items-center gap-2 px-6 py-4 rounded-2xl border border-slate-600 bg-slate-800/50 text-slate-300 hover:text-white hover:border-slate-500 hover:bg-slate-700/60 text-sm font-medium transition-all duration-200"
-                  >
-                    Watch Demo →
-                  </button>
+                  {DEV_BYPASS_ENABLED && (
+                    <button
+                      onClick={handleDemoSignIn}
+                      className="flex items-center gap-2 px-6 py-4 rounded-2xl border border-slate-600 bg-slate-800/50 text-slate-300 hover:text-white hover:border-slate-500 hover:bg-slate-700/60 text-sm font-medium transition-all duration-200"
+                    >
+                      Watch Demo →
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

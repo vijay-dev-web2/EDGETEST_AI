@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth import get_optional_user
+from auth import assert_session_owner, get_optional_user
 from database import get_db
 from models import Session as SessionModel, TestRun, User
 from sandbox import run_tests, run_unit_tests, run_integration_tests
@@ -40,8 +40,7 @@ async def _execute_and_persist(
     session = await db.get(SessionModel, sid)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    if current_user and session.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    assert_session_owner(session.user_id, current_user)
 
     try:
         loop = asyncio.get_running_loop()
@@ -147,8 +146,7 @@ async def run_integration(
     session = await db.get(SessionModel, sid)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    if current_user and session.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    assert_session_owner(session.user_id, current_user)
 
     ast = session.ast_json or {}
     gates = ast.get("pipeline_gates") or {}

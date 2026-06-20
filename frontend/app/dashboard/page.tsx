@@ -17,6 +17,7 @@ import { Step8ExecuteIntegrationTests } from "@/components/steps/Step8ExecuteInt
 import { Step7Export } from "@/components/steps/Step7Export";
 import type { Step } from "@/hooks/useAnalysis";
 import { supabase } from "@/lib/supabase";
+import { DEV_BYPASS_ENABLED, DEV_BYPASS_TOKEN } from "@/lib/devBypass";
 
 const STEP_META: { title: string; description: string }[] = [
   { title: "Input Ingestion",              description: "Paste code, import from GitHub, or generate from a user story." },
@@ -40,16 +41,16 @@ function DashboardInner() {
   const { state } = analysis;
 
   useEffect(() => {
-    const hasBypass = typeof document !== "undefined" && document.cookie.includes("dev_bypass=true");
+    const hasBypass = DEV_BYPASS_ENABLED && typeof document !== "undefined" && document.cookie.includes("dev_bypass=true");
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      setAccessToken(session?.access_token || (hasBypass ? "dev-mock-token" : ""));
+      setAccessToken(session?.access_token || (hasBypass ? DEV_BYPASS_TOKEN : ""));
       setAuthLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const bypass = typeof document !== "undefined" && document.cookie.includes("dev_bypass=true");
+      const bypass = DEV_BYPASS_ENABLED && typeof document !== "undefined" && document.cookie.includes("dev_bypass=true");
       setUser(session?.user ?? null);
-      setAccessToken(session?.access_token || (bypass ? "dev-mock-token" : ""));
+      setAccessToken(session?.access_token || (bypass ? DEV_BYPASS_TOKEN : ""));
     });
     return () => subscription.unsubscribe();
   }, []);

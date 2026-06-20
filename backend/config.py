@@ -56,3 +56,31 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+# Values that must never be used in production — defaults / common placeholders.
+_PLACEHOLDER_SECRETS = frozenset({
+    "", "change-me-in-production", "change-me", "changeme", "secret", "password",
+})
+
+
+def validate_production_settings(s: "Settings | None" = None) -> list[str]:
+    """Return a list of insecure-config problems when running in production.
+
+    No-op outside production. Used at startup to fail fast rather than booting
+    a production deployment with placeholder secrets or default credentials.
+    """
+    s = s or settings
+    if s.APP_ENV.lower() != "production":
+        return []
+
+    problems: list[str] = []
+    if s.SECRET_KEY.strip().lower() in _PLACEHOLDER_SECRETS:
+        problems.append("SECRET_KEY is unset or uses the default placeholder")
+    if not s.FERNET_KEY:
+        problems.append("FERNET_KEY is not set")
+    if "postgres:postgres@" in s.DATABASE_URL:
+        problems.append("DATABASE_URL uses the default postgres:postgres credentials")
+    if not (s.SUPABASE_URL and s.SUPABASE_SERVICE_KEY):
+        problems.append("Supabase is not configured (SUPABASE_URL / SUPABASE_SERVICE_KEY)")
+    return problems

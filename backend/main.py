@@ -16,7 +16,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import get_current_user
-from config import settings
+from config import settings, validate_production_settings
 from database import AsyncSessionLocal, get_db, init_db
 from models import Session as SessionModel, TestRun, User
 from routers import analyze, auth, export, ingest, metrics, report
@@ -38,6 +38,23 @@ def _configure_logging() -> None:
 async def lifespan(app: FastAPI):
     _configure_logging()
     logger.info("Starting EdgeTest AI (env=%s)", settings.APP_ENV)
+    from auth import _dev_bypass_enabled
+
+    if _dev_bypass_enabled():
+        logger.warning(
+            "Dev auth bypass token is ENABLED (APP_ENV=%s). Never run this in production.",
+            settings.APP_ENV,
+        )
+    else:
+        logger.info("Dev auth bypass token is disabled (APP_ENV=production).")
+
+    config_problems = validate_production_settings()
+    if config_problems:
+        raise RuntimeError(
+            "Refusing to start in production with insecure configuration:\n  - "
+            + "\n  - ".join(config_problems)
+        )
+
     await init_db()
     yield
     logger.info("Shutdown complete")

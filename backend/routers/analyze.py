@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth import get_current_user, get_optional_user
+from auth import assert_session_owner, get_current_user, get_optional_user
 from chains.base import make_chain
 from chains.codegen import TestFile, generate_tests, _sanitize_python
 from services.test_classifier import validate_integration_tests
@@ -364,8 +364,7 @@ async def pseudocode_stream(
     row = await db.get(SessionModel, payload.session_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    if current_user and row.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    assert_session_owner(row.user_id, current_user)
 
     language = row.language
     session_id = payload.session_id
@@ -475,8 +474,7 @@ async def generate(
     row = await db.get(SessionModel, payload.session_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    if current_user and row.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    assert_session_owner(row.user_id, current_user)
 
     if not payload.selected_categories:
         raise HTTPException(status_code=422, detail="selected_categories must not be empty")
@@ -509,8 +507,7 @@ async def generate_unit(
     row = await db.get(SessionModel, payload.session_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    if current_user and row.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    assert_session_owner(row.user_id, current_user)
 
     unit_categories = [c for c in payload.selected_categories if not c.lower().startswith("integration")]
     if not unit_categories:
@@ -552,8 +549,7 @@ async def generate_integration(
     row = await db.get(SessionModel, payload.session_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    if current_user and row.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    assert_session_owner(row.user_id, current_user)
 
     # Eligibility Gate
     ast = row.ast_json or {}
@@ -623,8 +619,7 @@ async def update_session_config(
     session = await db.get(SessionModel, body.session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    if current_user and session.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    assert_session_owner(session.user_id, current_user)
 
     ast = dict(session.ast_json or {})
     cfg = dict(ast.get("_config", {}))
