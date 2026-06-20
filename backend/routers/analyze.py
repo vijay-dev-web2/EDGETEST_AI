@@ -146,6 +146,10 @@ class SessionCreateRequest(BaseModel):
     code: str
     language: str
     user_story: str | None = None
+    # AST module dependency graph from GitHub ingest (build_module_graph output).
+    # Persisted into ast_json so eligibility scanning can use its detected
+    # service boundaries as a hint. Absent for pasted code.
+    module_graph: dict[str, Any] | None = None
 
 
 class SessionCreateResponse(BaseModel):
@@ -208,6 +212,7 @@ async def create_session(
         language=payload.language,
         user_story=payload.user_story,
         status="pending",
+        ast_json={"module_graph": payload.module_graph} if payload.module_graph else {},
     )
     db.add(session)
     await db.flush()
@@ -327,11 +332,14 @@ async def eligibility_scan(
             "pipeline_gates": ast["pipeline_gates"],
         }
 
-    # Otherwise run the eligibility scan
+    # Otherwise run the eligibility scan, feeding in the session's stored module
+    # graph as a boundary hint when present (GitHub ingest). Absent for pasted
+    # code — scan_eligibility then behaves exactly as before (backward compatible).
     eligibility_raw = await scan_eligibility(
         source_code=session.raw_code,
         file_name=session.repo_url or "code",
         language=session.language,
+        module_graph=ast.get("module_graph"),
     )
 
     gates = get_pipeline_gates(eligibility_raw)
@@ -539,12 +547,31 @@ async def generate_unit(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/generate-integration", response_model=list[TestFile])
+class RejectedIntegrationTest(BaseModel):
+    """A proposed integration test the LLM rejected, with the reason why."""
+    proposed_name: str = ""
+    rejection_rule: str = ""
+    reason: str = ""
+    correct_classification: str = ""
+
+
+class GenerateIntegrationResponse(BaseModel):
+    """Integration generation result: the test files plus any rejection reasons.
+
+    When no real integration boundary exists, `files` is empty and `rejected`
+    explains why (top-level reason + per-test rule 1-7 rejections), instead of
+    silently returning an empty list.
+    """
+    files: list[TestFile] = []
+    rejected: list[RejectedIntegrationTest] = []
+
+
+@router.post("/generate-integration", response_model=GenerateIntegrationResponse)
 async def generate_integration(
     payload: GenerateRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_optional_user),
-) -> list[TestFile]:
+) -> GenerateIntegrationResponse:
     """Generate integration tests (workflow/module-level) and store in session.integration_test_files."""
     row = await db.get(SessionModel, payload.session_id)
     if row is None:
@@ -566,6 +593,7 @@ async def generate_integration(
             "service interaction patterns, end-to-end business process flows"
         ]
 
+    rejected_raw: list[dict] = []
     try:
         files = await generate_tests(
             code=payload.code,
@@ -576,6 +604,7 @@ async def generate_integration(
             structured_files=payload.structured_files or None,
             subdir="integration",
             test_mode="integration",
+            rejected_out=rejected_raw,
         )
     except ValueError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
@@ -595,7 +624,10 @@ async def generate_integration(
     row.integration_test_files = files_data
     row.integration_coverage_pct = float(min(100, len(classified) * 12))
     await db.commit()
-    return classified
+    return GenerateIntegrationResponse(
+        files=classified,
+        rejected=[RejectedIntegrationTest(**r) for r in rejected_raw],
+    )
 
 
 # ---------------------------------------------------------------------------

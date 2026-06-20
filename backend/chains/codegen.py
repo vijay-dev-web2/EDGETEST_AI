@@ -1181,6 +1181,7 @@ async def generate_tests(
     coverage_manifest: CoverageManifest | None = None,
     subdir: str | None = None,
     test_mode: str = "unit",
+    rejected_out: list[dict[str, Any]] | None = None,
 ) -> list[TestFile]:
     """Generate test files for the given scenarios and write them to /tmp/edgetest/{session_id}/.
 
@@ -1293,17 +1294,35 @@ async def generate_tests(
                         code=it.code,
                     )]
                 else:
-                    # No valid integration boundary — log and return early
+                    # No valid integration boundary — surface the reasons instead
+                    # of discarding them. The caller passes `rejected_out` to receive
+                    # the top-level reason plus every per-test rejection (rule 1-7).
                     reason = (it.reason_if_unavailable if it else "No integration boundary found")
                     logger.info(
                         "No valid integration tests for session %s: %s",
                         session_id, reason,
                     )
-                    # Log rejected tests for debugging
                     for rej in hardened.rejected_integration_tests:
                         logger.debug(
                             "Rejected integration test '%s' by %s: %s",
                             rej.proposed_name, rej.rejection_rule, rej.reason,
+                        )
+                    if rejected_out is not None:
+                        if reason:
+                            rejected_out.append({
+                                "proposed_name": "",
+                                "rejection_rule": "",
+                                "reason": reason,
+                                "correct_classification": "",
+                            })
+                        rejected_out.extend(
+                            {
+                                "proposed_name": rej.proposed_name,
+                                "rejection_rule": rej.rejection_rule,
+                                "reason": rej.reason,
+                                "correct_classification": rej.correct_classification,
+                            }
+                            for rej in hardened.rejected_integration_tests
                         )
                     return []
             else:

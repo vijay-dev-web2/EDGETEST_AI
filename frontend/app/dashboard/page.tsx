@@ -268,6 +268,7 @@ function DashboardInner() {
                 integrationTestFiles={state.integrationTestFiles}
                 integrationGenerating={state.integrationGenerating}
                 integrationCoverage={state.integrationCoverage}
+                integrationRejections={state.integrationRejections}
                 isDemoMode={state.isDemoMode}
                 gates={state.pipelineGates}
                 eligibility={state.eligibility}
