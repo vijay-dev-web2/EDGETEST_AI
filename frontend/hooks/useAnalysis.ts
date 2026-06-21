@@ -10,6 +10,7 @@ import type {
   RiskResult,
   TraceabilityData,
   EligibilityReport,
+  RejectedIntegrationTest,
 } from "@/lib/backendApi";
 import {
   exchangeGithubToken,
@@ -71,6 +72,8 @@ export interface AnalysisState {
   integrationTestFiles: TestFile[];
   integrationGenerating: boolean;
   integrationCoverage: number;
+  // Reasons the LLM rejected integration tests (e.g. no real boundary found)
+  integrationRejections: RejectedIntegrationTest[];
   // Step 6 — Traceability Map
   traceabilityData: TraceabilityData | null;
   traceabilityLoading: boolean;
@@ -122,6 +125,7 @@ const DEFAULT_STATE: AnalysisState = {
   integrationTestFiles: [],
   integrationGenerating: false,
   integrationCoverage: 0,
+  integrationRejections: [],
   traceabilityData: null,
   traceabilityLoading: false,
   unitTraceabilityData: null,
@@ -218,7 +222,7 @@ export function useAnalysis() {
     try {
       await exchangeGithubToken(accessToken);
       patch({ loadingMessage: "Creating session…" });
-      const sessionId = await createSession(code, language, userStory || undefined);
+      const sessionId = await createSession(code, language, userStory || undefined, state.moduleGraph ?? undefined);
       patch({ sessionId, loadingMessage: "Analyzing code…", loading: false });
     } catch (e) {
       patch({ loading: false, loadingMessage: "", error: e instanceof Error ? e.message : "Analysis failed", currentStep: 1 });
@@ -405,6 +409,7 @@ export function useAnalysis() {
       currentStep: 5,
       integrationTestFiles: [],
       integrationGenerating: false,
+      integrationRejections: [],
     });
   }
 
@@ -420,7 +425,7 @@ export function useAnalysis() {
     highRiskFunctions?: string[],
     structuredFiles?: { path: string; content: string }[],
   ) {
-    patch({ integrationGenerating: true, error: null });
+    patch({ integrationGenerating: true, error: null, integrationRejections: [] });
 
     let categories = state.categories;
     if (categories.length === 0) {
@@ -434,14 +439,19 @@ export function useAnalysis() {
       .map((c) => c.name);
 
     try {
-      const files = await apiGenerateIntegrationTests(
+      const { files, rejected } = await apiGenerateIntegrationTests(
         code, language,
         integrationCategoryNames.length > 0 ? integrationCategoryNames : ["integration"],
         sessionId, userStory || undefined,
         structuredFiles && structuredFiles.length > 0 ? structuredFiles : undefined,
       );
       const coverage = Math.min(100, files.length * 12);
-      patch({ integrationTestFiles: files, integrationGenerating: false, integrationCoverage: coverage });
+      patch({
+        integrationTestFiles: files,
+        integrationGenerating: false,
+        integrationCoverage: coverage,
+        integrationRejections: rejected ?? [],
+      });
     } catch (e) {
       patch({ integrationGenerating: false, error: e instanceof Error ? e.message : "Integration test generation failed" });
     }

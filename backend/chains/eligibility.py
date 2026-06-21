@@ -97,12 +97,43 @@ Return ONLY a valid JSON object matching this structure:
 """
 
 
+def _build_boundary_hint(module_graph: dict[str, Any] | None) -> str:
+    """Render AST-detected service boundaries as an LLM hint.
+
+    Mirrors how risk_scoring injects AST-derived security_hints. The module
+    graph's `integration_boundaries` are real cross-module service-to-service
+    calls found by static analysis — strong evidence for integration eligibility.
+    Returns an empty string when no graph / no boundaries are available.
+    """
+    if not module_graph:
+        return ""
+    boundaries = module_graph.get("integration_boundaries") or []
+    if not boundaries:
+        return ""
+    lines = "\n".join(
+        f"  - {b.get('from', '?')} → {b.get('to', '?')} ({b.get('type', 'service_call')})"
+        for b in boundaries
+    )
+    return (
+        "\n\nAST-DETECTED SERVICE BOUNDARIES (static-analysis hint — these are real "
+        "cross-module service calls found in the code. Treat them as strong evidence "
+        "of integration_test_eligible=true and reflect them in integration_boundaries):\n"
+        f"{lines}"
+    )
+
+
 async def scan_eligibility(
     source_code: str,
     file_name: str = "unknown",
     language: str = "python",
+    module_graph: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Scans source code and returns an EligibilityReport dict."""
+    """Scans source code and returns an EligibilityReport dict.
+
+    When *module_graph* (from module_graph.build_module_graph) is provided, its
+    detected service-to-service boundaries are injected as an extra hint for the
+    LLM. Passing None preserves the original behaviour exactly (backward compatible).
+    """
     chain = make_chain(ELIGIBILITY_SYSTEM, temperature=0.1, json_mode=True, label="eligibility")
 
     human_input = (
@@ -112,6 +143,7 @@ async def scan_eligibility(
         f"```{language}\n"
         f"{source_code}\n"
         f"```"
+        f"{_build_boundary_hint(module_graph)}"
     )
 
     try:

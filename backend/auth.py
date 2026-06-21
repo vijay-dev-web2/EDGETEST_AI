@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +11,18 @@ from config import settings
 from database import get_db
 from models import User
 
+logger = logging.getLogger(__name__)
+
 _supabase_client = None
+
+# The dev bypass token authenticates as a fixed test user without contacting
+# Supabase. It is a convenience for local development / demos ONLY and must
+# never be honoured in production. Gated on APP_ENV below.
+DEV_BYPASS_TOKEN = "dev-mock-token"
+
+
+def _dev_bypass_enabled() -> bool:
+    return settings.APP_ENV.lower() != "production"
 
 
 def _get_supabase():
@@ -20,7 +33,13 @@ def _get_supabase():
 
 
 async def verify_supabase_token(token: str) -> dict | None:
-    if token == "dev-mock-token":
+    if token == DEV_BYPASS_TOKEN:
+        if not _dev_bypass_enabled():
+            logger.warning(
+                "Rejected dev bypass token: disabled in production (APP_ENV=%s)",
+                settings.APP_ENV,
+            )
+            return None
         return {
             "sub": "4b6cb785-52b6-4f5d-8eaf-77d5f174ef81",
             "email": "test@test.com",
@@ -112,3 +131,16 @@ async def get_optional_user(
         return await get_current_user(request, db)
     except HTTPException:
         return None
+
+
+def assert_session_owner(owner_id, current_user: User | None) -> None:
+    """Authorize access to an owned resource (e.g. a Session).
+
+    Raises 403 unless *current_user* owns the resource. Anonymous callers
+    (``current_user is None``) are denied access to any resource that has an
+    owner. This closes the IDOR where ownership was only enforced for
+    authenticated requests — an unauthenticated caller previously bypassed the
+    check entirely on ``get_optional_user`` endpoints.
+    """
+    if owner_id is not None and (current_user is None or owner_id != current_user.id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")

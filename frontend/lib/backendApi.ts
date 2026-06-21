@@ -52,10 +52,20 @@ export async function analyzeCompleteness(
   return data;
 }
 
-export async function createSession(code: string, language: string, userStory?: string): Promise<string> {
+export async function createSession(
+  code: string,
+  language: string,
+  userStory?: string,
+  moduleGraph?: GithubFetchResult["module_graph"],
+): Promise<string> {
   const res = await backendFetch("/api/analyze/sessions", {
     method: "POST",
-    body: JSON.stringify({ code, language, user_story: userStory ?? null }),
+    body: JSON.stringify({
+      code,
+      language,
+      user_story: userStory ?? null,
+      module_graph: moduleGraph ?? null,
+    }),
   });
   const data = await res.json();
   return data.session_id as string;
@@ -281,6 +291,18 @@ export async function generateUnitTests(
   return res.json();
 }
 
+export interface RejectedIntegrationTest {
+  proposed_name: string;
+  rejection_rule: string;
+  reason: string;
+  correct_classification: string;
+}
+
+export interface GenerateIntegrationResult {
+  files: TestFile[];
+  rejected: RejectedIntegrationTest[];
+}
+
 export async function generateIntegrationTests(
   code: string,
   language: string,
@@ -288,7 +310,7 @@ export async function generateIntegrationTests(
   sessionId: string,
   userStory?: string,
   structuredFiles?: { path: string; content: string }[],
-): Promise<TestFile[]> {
+): Promise<GenerateIntegrationResult> {
   const res = await backendFetch("/api/analyze/generate-integration", {
     method: "POST",
     body: JSON.stringify({

@@ -108,3 +108,6 @@ zstandard==0.25.0
 openpyxl==3.1.5
 python-docx==1.2.0
 autopep8==2.3.2
+supabase==2.31.0
+pydantic-settings==2.14.2
+langchain-anthropic==1.4.4

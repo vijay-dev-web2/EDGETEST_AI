@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Loader2, ChevronRight, Beaker, CheckCircle2, Code2, Network, AlertTriangle, Ban } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { TestFile } from "@/lib/backendApi";
+import type { TestFile, RejectedIntegrationTest } from "@/lib/backendApi";
 import type { Language } from "@/hooks/useAnalysis";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -22,6 +22,7 @@ interface Props {
   integrationTestFiles: TestFile[];
   integrationGenerating: boolean;
   integrationCoverage: number;
+  integrationRejections?: RejectedIntegrationTest[];
   isDemoMode?: boolean;
   gates?: Record<string, boolean> | null;
   eligibility?: any;
@@ -42,6 +43,7 @@ export function Step5GenerateIntegrationTests({
   code, language, sessionId, pseudocode,
   userStory, riskLevel, highRiskFunctions, structuredFiles,
   integrationTestFiles, integrationGenerating, integrationCoverage,
+  integrationRejections,
   isDemoMode,
   gates, eligibility,
   onGenerate, onProceed,
@@ -169,8 +171,9 @@ export function Step5GenerateIntegrationTests({
                 <p className="text-xs text-amber-400/80">
                   Some generated tests appear to be <strong>unit tests</strong> placed in the integration pipeline.
                   Integration tests must span multiple objects, services, or workflow steps — not test a single function in isolation.
-                  The AI has been instructed to regenerate. If you see single-function tests like{" "}
-                  <code className="font-mono bg-amber-500/10 px-1 rounded">test_deposit_positive_amount</code>, use the unit test pipeline instead.
+                  These tests are <strong>kept and flagged</strong> — they are not regenerated automatically. You can edit them
+                  in the Execute Integration Tests step, or move single-function tests like{" "}
+                  <code className="font-mono bg-amber-500/10 px-1 rounded">test_deposit_positive_amount</code> to the unit test pipeline.
                 </p>
               </div>
             </div>
@@ -264,14 +267,43 @@ export function Step5GenerateIntegrationTests({
       )}
 
       {!integrationGenerating && integrationTestFiles.length === 0 && sessionId && started.current && (
-        <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center space-y-3">
-          <p className="text-sm font-semibold text-slate-300">No integration boundaries detected</p>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
-            The source code has no external dependencies (database, HTTP, file system, queue, or
-            distinct service classes) that would constitute a real integration boundary.
-            All behavior is fully covered by the unit tests generated in Step 4.
-          </p>
-          <p className="text-xs text-amber-400/70">
+        <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 space-y-4">
+          <div className="text-center space-y-3">
+            <p className="text-sm font-semibold text-slate-300">No integration boundaries detected</p>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              The source code has no external dependencies (database, HTTP, file system, queue, or
+              distinct service classes) that would constitute a real integration boundary.
+              All behavior is fully covered by the unit tests generated in Step 4.
+            </p>
+          </div>
+
+          {/* Actual rejection reasons from the AI, when present */}
+          {integrationRejections && integrationRejections.length > 0 && (
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-left max-w-lg mx-auto space-y-2">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                Why the AI rejected integration tests
+              </p>
+              {integrationRejections.map((r, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-2 text-xs text-slate-400 border-b border-slate-800/40 pb-2 last:border-0 last:pb-0"
+                >
+                  <AlertTriangle className="size-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    {(r.proposed_name || r.rejection_rule) && (
+                      <p className="text-slate-300 font-medium">
+                        {r.proposed_name || "Boundary check"}
+                        {r.rejection_rule ? ` — ${r.rejection_rule}` : ""}
+                      </p>
+                    )}
+                    <p>{r.reason}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="text-xs text-amber-400/70 text-center">
             Tip: Integration tests require at least two distinct components crossing an architectural boundary.
             A Python list or dict does not qualify as a database.
           </p>
